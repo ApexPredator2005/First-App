@@ -888,10 +888,20 @@ function setupEventListeners() {
     }
   });
 
+  // Helper for ultra-smooth modal closing transition
+  function closeModalSmooth(modal) {
+    if (!modal) return;
+    modal.classList.add("closing");
+    setTimeout(() => {
+      modal.classList.remove("closing");
+      try { modal.close(); } catch(e) {}
+    }, 260);
+  }
+
   // Modal Triggers
   DOM.openSettingsBtn.addEventListener("click", () => DOM.settingsModal.showModal());
-  DOM.closeSettingsModal.addEventListener("click", () => DOM.settingsModal.close());
-  DOM.closePlaceModal.addEventListener("click", () => DOM.placeModal.close());
+  DOM.closeSettingsModal.addEventListener("click", () => closeModalSmooth(DOM.settingsModal));
+  DOM.closePlaceModal.addEventListener("click", () => closeModalSmooth(DOM.placeModal));
 
   // Toggle API Key Masking
   const toggleKeyBtn = document.getElementById("toggle-key-visibility");
@@ -909,7 +919,7 @@ function setupEventListeners() {
   }
 
   DOM.modalRouteBtn.addEventListener("click", () => {
-    DOM.placeModal.close();
+    closeModalSmooth(DOM.placeModal);
     if (state.selectedPlace) {
       calculateAndRenderRoute(state.selectedPlace);
     }
@@ -925,7 +935,7 @@ function setupEventListeners() {
     state.apiKey = enteredKey;
     state.mapId = enteredMapId;
     
-    DOM.settingsModal.close();
+    closeModalSmooth(DOM.settingsModal);
     if (enteredKey) {
       await initializeAppEngine();
     } else {
@@ -935,11 +945,11 @@ function setupEventListeners() {
 
   // Close dialogs on outside click
   window.addEventListener("click", (e) => {
-    if (e.target === DOM.settingsModal) DOM.settingsModal.close();
-    if (e.target === DOM.placeModal) DOM.placeModal.close();
-    if (e.target === DOM.locationModal) DOM.locationModal.close();
+    if (e.target === DOM.settingsModal) closeModalSmooth(DOM.settingsModal);
+    if (e.target === DOM.placeModal) closeModalSmooth(DOM.placeModal);
+    if (e.target === DOM.locationModal) closeModalSmooth(DOM.locationModal);
     const healthModal = document.getElementById("health-modal");
-    if (e.target === healthModal) healthModal.close();
+    if (e.target === healthModal) closeModalSmooth(healthModal);
   });
 
   // ====================================================================
@@ -1045,7 +1055,7 @@ function setupHealthModal() {
     renderRemindersList();
     healthModal.showModal();
   });
-  if (closeHealthBtn) closeHealthBtn.addEventListener("click", () => healthModal.close());
+  if (closeHealthBtn) closeHealthBtn.addEventListener("click", () => closeModalSmooth(healthModal));
 
   // Tab Switching
   const tabBtns = healthModal.querySelectorAll(".health-tab-btn");
@@ -1345,14 +1355,14 @@ function setupSOS() {
     }
   });
 
-  if (closeSosModal) closeSosModal.addEventListener("click", () => sosModal.close());
-  if (sosModalCancel) sosModalCancel.addEventListener("click", () => sosModal.close());
+  if (closeSosModal) closeSosModal.addEventListener("click", () => closeModalSmooth(sosModal));
+  if (sosModalCancel) sosModalCancel.addEventListener("click", () => closeModalSmooth(sosModal));
 
   if (sosConfirm) sosConfirm.addEventListener("click", () => {
     const phone = sosPhone ? sosPhone.value.trim() : "";
     if (!phone) { alert("Please enter a phone number."); return; }
     state.sosPhoneNumber = phone;
-    sosModal.close();
+    closeModalSmooth(sosModal);
     activateSOS();
   });
 

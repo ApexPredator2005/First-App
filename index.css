@@ -795,22 +795,64 @@ body::after {
 .step-dist { flex-shrink: 0; font-weight: 600; color: var(--accent-cyan); font-size: 0.7rem; }
 
 /* ==========================================================================
-   Modals (Liquid Glass)
+   Modals (Ultra-Smooth Spring-Fade & Slide-Up Entry)
    ========================================================================== */
 .glass-modal {
-  border: none; background: transparent; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; z-index: 1000; display: none;
+  border: none;
+  background: transparent;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.glass-modal[open], .glass-modal:modal { display: flex; align-items: center; justify-content: center; }
+
+.glass-modal[open], .glass-modal:modal {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .glass-modal::backdrop {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(4, 6, 12, 0.72);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
 }
 
 .modal-content {
-  background: #1a1d24;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(22, 26, 35, 0.94);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-xl);
-  width: 90%; max-width: 480px; padding: 1.5rem;
-  box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+  width: 90%;
+  max-width: 500px;
+  padding: 1.6rem;
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.6), inset 0 0.5px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(28px) scale(0.94);
+  opacity: 0;
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-modal[open] .modal-content {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.glass-modal.closing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.glass-modal.closing .modal-content {
+  transform: translateY(20px) scale(0.95);
+  opacity: 0;
 }
 
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 0.8rem; }
