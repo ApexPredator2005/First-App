@@ -564,12 +564,9 @@ async function calculateAndRenderRoute(place) {
       state.lastRouteResponse = response;
       state.navDestination = place;
 
-      // SOS Hook: if SOS is active, send facility address to emergency contact
-      if (state.sosActive && state.sosPhoneNumber) {
-        const facMsg = `🏥 *NAVIGATING TO:* ${place.displayName}\n📫 ${place.formattedAddress || "Address N/A"}\n📍 ${leg.distance ? leg.distance.text : ""} away, ETA ${leg.duration ? leg.duration.text : "N/A"}`;
-        const encoded = encodeURIComponent(facMsg);
-        const cleanNum = state.sosPhoneNumber.replace(/[^\d+]/g, "");
-        window.open(`https://wa.me/${cleanNum}?text=${encoded}`, "_blank");
+      // SOS Hook: if SOS is active, trigger comprehensive location + facility alert
+      if (state.sosActive) {
+        sendSOSLocation();
       }
     }
   } catch (error) {
@@ -605,6 +602,9 @@ async function calculateAndRenderRoute(place) {
 // ============================================================================
 function openPlaceDetailsModal(place) {
   state.selectedPlace = place;
+  if (state.sosActive) {
+    sendSOSLocation();
+  }
   const meta = CATEGORY_META[state.currentCategory];
 
   DOM.modalPlaceName.textContent = place.displayName || "Emergency Facility";
@@ -1294,11 +1294,29 @@ function sendSOSLocation() {
   const profile = JSON.parse(localStorage.getItem("RESQNOW_PROFILE") || "{}");
   const customMessage = profile["profile-sos-message"] ? `${profile["profile-sos-message"]}\n\n` : "";
   
-  let msg = `${customMessage}🆘 *RESQNOW SOS ALERT*\n⏰ ${time}\n📍 Live Location: ${mapLink}\n🔗 Lat: ${lat}, Lng: ${lng}`;
+  let msg = `${customMessage}🆘 *RESQNOW SOS ALERT*\n⏰ ${time}\n📍 User Live Location: ${mapLink}\n🔗 Lat: ${lat}, Lng: ${lng}`;
 
-  const cleanNum = state.sosPhoneNumber.replace(/[^\d+]/g, "");
+  // Include target facility location if user selected or is navigating to one
+  const dest = state.navDestination || state.selectedPlace;
+  if (dest) {
+    const destName = dest.displayName || dest.name || "Emergency Facility";
+    const destAddr = dest.formattedAddress || "";
+    let destLat = "";
+    let destLng = "";
+    if (dest.location) {
+      destLat = typeof dest.location.lat === "function" ? dest.location.lat() : dest.location.lat;
+      destLng = typeof dest.location.lng === "function" ? dest.location.lng() : dest.location.lng;
+    }
+    const destLink = (destLat && destLng) ? `https://www.google.com/maps?q=${destLat},${destLng}` : "";
+    
+    msg += `\n\n🏥 *TARGET DESTINATION (FACILITY):*\n🏥 ${destName}`;
+    if (destAddr) msg += `\n📫 Address: ${destAddr}`;
+    if (destLink) msg += `\n📍 Facility Location: ${destLink}`;
+  }
+
+  const cleanNum = state.sosPhoneNumber ? state.sosPhoneNumber.replace(/[^\d+]/g, "") : "";
   const encoded = encodeURIComponent(msg);
-  const url = `https://wa.me/${cleanNum}?text=${encoded}`;
+  const url = cleanNum ? `https://wa.me/${cleanNum}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
   
   // Use a temporary <a> element to avoid popup blockers
   const a = document.createElement("a");
