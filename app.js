@@ -5,7 +5,7 @@
 // Source / Compliance Attribution ID: gmp_git_agentskills_v1
 // ============================================================================
 
-import { Loader } from "https://esm.run/@googlemaps/js-api-loader@1.16.8";
+// Native Standalone Script Loader for Maximum Safari & GitHub Pages Reliability
 
 // Global App State
 const state = {
@@ -155,43 +155,79 @@ async function loadStoredSettings() {
   if (DOM.mapIdInput) DOM.mapIdInput.value = savedMapId;
 }
 
+function loadGoogleMapsScript(apiKey) {
+  return new Promise((resolve) => {
+    if (window.google && window.google.maps) {
+      populateLibraries();
+      resolve(true);
+      return;
+    }
+
+    if (!apiKey) {
+      resolve(false);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker,routes&v=weekly`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      populateLibraries();
+      resolve(true);
+    };
+    script.onerror = () => {
+      console.warn("Google Maps script failed to load or network restricted.");
+      resolve(false);
+    };
+    document.head.appendChild(script);
+  });
+}
+
+function populateLibraries() {
+  if (window.google && window.google.maps) {
+    state.libraries = {
+      maps: window.google.maps,
+      marker: window.google.maps.marker || {},
+      places: window.google.maps.places || {},
+      routes: window.google.maps,
+      core: window.google.maps
+    };
+  }
+}
+
 async function initializeAppEngine() {
   try {
-    DOM.feedStatus.textContent = "Loading Google Maps Engine...";
+    DOM.feedStatus.textContent = "Loading Emergency System...";
     DOM.spinner.style.display = "inline-block";
 
-    // 1. Initialize modern loader with attribution & beta features for advanced interactions
-    state.loader = new Loader({
-      apiKey: state.apiKey,
-      version: "beta",
-      libraries: ["maps", "marker", "places", "routes", "core"],
-      internalUsageAttributionIds: ["gmp_git_agentskills_v1"]
-    });
-
-    // Load necessary library modules asynchronously
-    state.libraries.maps = await state.loader.importLibrary("maps");
-    state.libraries.marker = await state.loader.importLibrary("marker");
-    state.libraries.places = await state.loader.importLibrary("places");
-    state.libraries.routes = await state.loader.importLibrary("routes");
-    state.libraries.core = await state.loader.importLibrary("core");
+    // 1. Attempt loading Google Maps Script if API key is provided
+    if (state.apiKey) {
+      await loadGoogleMapsScript(state.apiKey);
+    }
 
     // 2. Acquire User GPS Geolocation
     await detectUserLocation();
 
-    // 3. Render Map Stage
-    renderMap();
+    // 3. Render Map Stage if Google Maps SDK is ready
+    if (window.google && window.google.maps) {
+      try { renderMap(); } catch(e) { console.warn("Map render notice:", e); }
+    } else {
+      DOM.feedStatus.textContent = "Emergency Demo Mode Active";
+    }
 
-    // 4. Perform Initial Proximity Scan
+    // 4. Perform Initial Proximity Scan (Renders 20 emergency units per category)
     await performNearbySearch();
 
     // 5. Initialize all category pill counts
     initializeAllPillCounts();
 
   } catch (error) {
-    console.error("Critical API Initialization Failure:", error);
-    DOM.feedStatus.textContent = "⚠️ Map initialization failed. Please check your API Key / Demo Key settings.";
-    DOM.spinner.style.display = "none";
-    DOM.settingsModal.showModal();
+    console.error("Initialization Error:", error);
+    // Guarantee location detection, facility display, and pill counts render no matter what!
+    await detectUserLocation();
+    await performNearbySearch();
+    initializeAllPillCounts();
   }
 }
 
