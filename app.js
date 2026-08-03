@@ -6,7 +6,6 @@
 // ============================================================================
 
 import { Loader } from "https://esm.run/@googlemaps/js-api-loader@1.16.8";
-import { soundManager, CATEGORY_CONFIG } from "./soundManager.js";
 
 // Global App State
 const state = {
@@ -746,51 +745,10 @@ function setupEventListeners() {
   setupHealthModal();
   setupHealthQuotes();
 
-  // Sound Mute/Unmute Header Toggle
-  const toggleSoundBtn = document.getElementById("toggle-sound-btn");
-  const soundBtnIcon = document.getElementById("sound-btn-icon");
-  const soundBtnText = document.getElementById("sound-btn-text");
-
-  function updateSoundBtnUI() {
-    if (!toggleSoundBtn) return;
-    if (soundManager.isMuted) {
-      toggleSoundBtn.classList.add("muted");
-      if (soundBtnIcon) soundBtnIcon.textContent = "🔇";
-      if (soundBtnText) soundBtnText.textContent = "Audio MUTED";
-    } else {
-      toggleSoundBtn.classList.remove("muted");
-      if (soundBtnIcon) soundBtnIcon.textContent = "🔊";
-      if (soundBtnText) soundBtnText.textContent = "Audio ON";
-    }
-  }
-  updateSoundBtnUI();
-
-  if (toggleSoundBtn) {
-    toggleSoundBtn.addEventListener("click", () => {
-      soundManager.toggleMute();
-      updateSoundBtnUI();
-    });
-  }
-
-  // Pre-warm AudioContext on first user interaction anywhere
-  const warmAudio = () => {
-    soundManager.initAudioContext();
-    window.removeEventListener("click", warmAudio);
-    window.removeEventListener("keydown", warmAudio);
-  };
-  window.addEventListener("click", warmAudio);
-  window.addEventListener("keydown", warmAudio);
-
-  // Category Switching Pills with Sound & Icon Morphing (Click + Keyboard Enter/Space)
+  // Category Switching Pills with smooth cross-fade (Click + Keyboard Enter/Space)
   DOM.pills.forEach(pill => {
     const handleCategoryActivate = () => {
-      soundManager.initAudioContext();
       const category = pill.dataset.category;
-      
-      // Play Category Sound & Trigger Icon Morph Animation
-      soundManager.playSound(category);
-      soundManager.triggerIconMorph(pill, category);
-
       if (category === state.currentCategory) return;
       DOM.pills.forEach(p => p.classList.remove("active"));
       pill.classList.add("active");

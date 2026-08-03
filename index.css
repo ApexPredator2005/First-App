@@ -457,44 +457,7 @@ body::after {
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-.pill-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  font-size: 1.35rem;
-  flex-shrink: 0;
-  transform-origin: center center;
-  transition: transform 0.3s ease;
-}
-
-@keyframes iconMorphPulse {
-  0% {
-    transform: scale(1) rotate(0deg);
-    opacity: 1;
-    filter: brightness(1);
-  }
-  45% {
-    transform: scale(1.48) rotate(180deg);
-    opacity: 0.2;
-    filter: brightness(1.8) drop-shadow(0 0 10px rgba(244, 114, 182, 0.9));
-  }
-  55% {
-    transform: scale(1.48) rotate(180deg);
-    opacity: 0.3;
-    filter: brightness(1.8) drop-shadow(0 0 10px rgba(244, 114, 182, 0.9));
-  }
-  100% {
-    transform: scale(1) rotate(360deg);
-    opacity: 1;
-    filter: brightness(1);
-  }
-}
-
-.pill-icon.icon-morphing {
-  animation: iconMorphPulse 0.52s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
+.pill-icon { font-size: 1.3rem; }
 
 .pill-count {
   margin-left: 0.2rem;
@@ -504,19 +467,6 @@ body::after {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-primary);
-}
-
-.btn-sound-toggle {
-  background: rgba(52, 211, 153, 0.12) !important;
-  border: 1px solid rgba(52, 211, 153, 0.3) !important;
-  color: var(--accent-emerald) !important;
-  font-size: 0.78rem !important;
-  padding: 0.3rem 0.7rem !important;
-}
-.btn-sound-toggle.muted {
-  background: rgba(251, 113, 133, 0.12) !important;
-  border: 1px solid rgba(251, 113, 133, 0.3) !important;
-  color: var(--accent-magenta) !important;
 }
 
 .pill-glow { display: none; }
