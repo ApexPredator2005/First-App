@@ -375,10 +375,9 @@ function renderPlaceCard(place, index) {
   if (isOpen === false) statusHTML = `<span class="badge-status badge-closed">🔴 Closed</span>`;
 
   const li = document.createElement("li");
-  li.className = "place-card";
+  li.className = "place-card animate-in";
   li.setAttribute("data-type", state.currentCategory);
-  li.style.animation = `slideInCard 0.4s ease forwards`;
-  li.style.animationDelay = `${index * 0.06}s`;
+  li.style.animationDelay = `${Math.min(index * 70, 420)}ms`;
   const phoneNum = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
 
   li.innerHTML = `
@@ -462,9 +461,31 @@ function clearPlaceMarkers() {
   }
 }
 
+function animateCountUp(element, targetCount) {
+  if (!element) return;
+  const startCount = parseInt(element.textContent) || 0;
+  if (startCount === targetCount) return;
+  
+  const duration = 400;
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeOutProgress = 1 - Math.pow(1 - progress, 3);
+    const currentVal = Math.round(startCount + (targetCount - startCount) * easeOutProgress);
+    element.textContent = currentVal;
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  requestAnimationFrame(update);
+}
+
 function updatePillCount(category, count) {
   const countSpan = document.getElementById(`count-${category}`);
-  if (countSpan) countSpan.textContent = count;
+  if (countSpan) animateCountUp(countSpan, count);
 }
 
 function fitMapToResults() {
@@ -707,13 +728,21 @@ function setupEventListeners() {
   setupHealthModal();
   setupHealthQuotes();
 
-  // Category Switching Pills
+  // Category Switching Pills with smooth cross-fade
   DOM.pills.forEach(pill => {
     pill.addEventListener("click", () => {
+      if (pill.dataset.category === state.currentCategory) return;
       DOM.pills.forEach(p => p.classList.remove("active"));
       pill.classList.add("active");
       state.currentCategory = pill.dataset.category;
-      performNearbySearch();
+
+      DOM.placesFeed.style.opacity = "0";
+      DOM.placesFeed.style.transform = "translateY(6px)";
+      setTimeout(() => {
+        performNearbySearch();
+        DOM.placesFeed.style.opacity = "1";
+        DOM.placesFeed.style.transform = "translateY(0)";
+      }, 150);
     });
   });
 
