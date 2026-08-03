@@ -227,17 +227,19 @@ class SoundManager {
       clearTimeout(this.revertTimers[category]);
     }
 
-    // Apply morph animation class
+    // Force animation reflow so rapid clicks always re-trigger 3D morph
+    iconSpan.classList.remove("icon-morphing");
+    void iconSpan.offsetWidth;
     iconSpan.classList.add("icon-morphing");
     
-    // Swap icon content halfway through crossfade (200ms)
+    // Swap icon content at the peak of the 3D spin morph (250ms)
     setTimeout(() => {
       iconSpan.textContent = config.activeIcon;
-    }, 200);
+    }, 250);
 
     setTimeout(() => {
       iconSpan.classList.remove("icon-morphing");
-    }, 450);
+    }, 550);
 
     // Schedule automatic revert back to default icon after 2.5 seconds
     this.revertTimers[category] = setTimeout(() => {
@@ -253,13 +255,17 @@ class SoundManager {
     const config = CATEGORY_CONFIG[category];
     if (!config) return;
 
+    iconSpan.classList.remove("icon-morphing");
+    void iconSpan.offsetWidth;
     iconSpan.classList.add("icon-morphing");
+
     setTimeout(() => {
       iconSpan.textContent = config.defaultIcon;
-    }, 200);
+    }, 250);
+
     setTimeout(() => {
       iconSpan.classList.remove("icon-morphing");
-    }, 450);
+    }, 550);
   }
 
   revertAllIcons() {
