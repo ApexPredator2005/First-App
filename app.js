@@ -322,42 +322,132 @@ function getEmergencyFallbackPlaces(category, userLoc) {
       "PMCH Central Emergency Hospital",
       "IGIMS Super Specialty Hospital",
       "Ruban Memorial Hospital & ICU",
-      "City Care Multi-Specialty Hospital"
+      "City Care Multi-Specialty Hospital",
+      "Kurji Holy Family Hospital",
+      "Nalanda Medical College & Hospital (NMCH)",
+      "Ford Hospital & Research Centre",
+      "Paras HMRI Hospital & Emergency",
+      "Mediversal Multi-Specialty Hospital",
+      "Apex Heart & Emergency Care",
+      "LifeLine Super Specialty ICU",
+      "Patna Trauma & Critical Care Center",
+      "St. Joseph Emergency Hospital",
+      "Metro Care Emergency Clinic",
+      "Global Health Multi-Specialty Hospital",
+      "Heritage Emergency & Critical Care",
+      "Red Cross Emergency Medical Center",
+      "Care & Cure Emergency Hospital",
+      "Universal Trauma & ICU Center"
     ],
     police: [
       "District Police Control Room & HQ",
       "Kankarbagh Police Station & Beat",
       "Patna Junction Traffic & Emergency Post",
       "Shastri Nagar Model Police Station",
-      "Kotwali Central Police Station"
+      "Kotwali Central Police Station",
+      "Gandhi Maidan Police Station",
+      "Rajeev Nagar Police Post",
+      "Phulwari Sharif Police Station",
+      "Danapur Cantonment Police Station",
+      "Patliputra Police Outpost",
+      "SK Puri Model Police Station",
+      "Gardanibagh Police Control Room",
+      "Bypass Highway Patrol Station",
+      "Airport Highway Security Outpost",
+      "Digha Ghat River Patrol Station",
+      "Agam Kuan Police Post",
+      "Budha Colony Police Station",
+      "Bahadurpur Police Beat",
+      "Secretariat High Security Police HQ",
+      "Women & Child Protection Cell HQ"
     ],
     fire_station: [
       "Patna Main Fire Station & Headquarters",
       "Kankarbagh Fire Sub-Station",
       "Danapur Cantonment Fire Brigade",
       "Phulwari Sharif Industrial Fire Response",
-      "Bypass Highway Emergency Fire Unit"
+      "Bypass Highway Emergency Fire Unit",
+      "Patliputra Industrial Area Fire Station",
+      "Airport Runway Fire & Safety Unit",
+      "Secretariat Zone Fire Station",
+      "Digha Industrial Fire Post",
+      "Gandhi Maidan Central Fire Brigade",
+      "Boring Road Emergency Fire Unit",
+      "Rajendra Nagar Fire Control Sub-Station",
+      "NMCH Hospital Zone Fire Unit",
+      "Anisabad Highway Fire Brigade",
+      "Bihta Emergency Fire Response Base",
+      "Khagaul Railway Fire Station",
+      "Kumhrar Heritage Zone Fire Unit",
+      "City Central Water Tender Base",
+      "Gardanibagh Fire Control Post",
+      "Riverfront Disaster Response Station"
     ],
     pharmacy: [
       "Apollo Pharmacy 24x7 Emergency",
       "Sanjeevani Medicos & Life Support",
       "MedPlus 24-Hour Emergency Chemists",
       "Apex Healthcare & Surgical Supplies",
-      "Wellness Forever Emergency Pharmacy"
+      "Wellness Forever Emergency Pharmacy",
+      "Frank Ross 24 Hour Chemist",
+      "Care Pharmacy & Surgical Store",
+      "LifeCare 24x7 Emergency Druggists",
+      "Patna Central Medical Hall",
+      "Relief 24-Hour Emergency Chemists",
+      "PMCH Campus Emergency Pharmacy",
+      "AIIMS Gate 24x7 Medicos",
+      "City Health Surgical & Pharmacy",
+      "Noble Chemists & Oxygen Depot",
+      "Gupta Emergency Medicos",
+      "Metro Care 24x7 Pharmacy",
+      "HealthFirst Emergency Druggists",
+      "Global Pharma & Surgical Depot",
+      "Red Cross Emergency Medicine Store",
+      "Universal 24 Hour Pharmacy"
     ],
     veterinary_care: [
       "Government Veterinary Hospital & ICU",
       "Paws & Claws Emergency Pet Clinic",
       "PetCare Multi-Specialty Vet Clinic",
       "City Animal Welfare & Emergency Care",
-      "Heal Pets 24x7 Trauma Hospital"
+      "Heal Pets 24x7 Trauma Hospital",
+      "Patna Pet Clinic & Surgical Unit",
+      "Animal Rescue & Emergency Shelter",
+      "Loyal Companions Vet Clinic",
+      "State Cattle & Small Animal Hospital",
+      "Happy Tails Pet Emergency Care",
+      "Dr. Dog & Cat Trauma Center",
+      "Vet Medicos & Animal Care Base",
+      "Urban Vet Specialty Clinic",
+      "Compassion Animal Rescue Base",
+      "Pet Paradise Emergency Clinic",
+      "VetSurge Animal Trauma Hospital",
+      "CareForPets 24x7 Vet Care",
+      "City Zoo & Wildlife Emergency Post",
+      "Blue Cross Animal Care Unit",
+      "Universal Pet Emergency Hospital"
     ],
     blood_bank: [
       "Red Cross Society Central Blood Bank",
       "AIIMS Blood Transfusion Center",
       "LifeSaver Voluntary Blood Bank",
       "Patna Rotary Blood Bank & Component Unit",
-      "Metro City Blood Bank 24x7"
+      "Metro City Blood Bank 24x7",
+      "PMCH Regional Blood Transfusion Center",
+      "IGIMS Model Blood Bank",
+      "Prathama Blood Centre & Plasma Depot",
+      "Sanjeevani Blood Transfusion Unit",
+      "Lion's Club Emergency Blood Bank",
+      "Nalanda Emergency Blood Transfusion",
+      "Central Armed Forces Blood Depot",
+      "Apex Voluntary Blood Bank",
+      "City Care Plasma & Blood Center",
+      "LifeLine 24x7 Blood Bank",
+      "Heritage Blood Components Depot",
+      "Red Cross Emergency Plasma Unit",
+      "Humanity Blood Transfusion Center",
+      "Universal Voluntary Blood Bank",
+      "State Disaster Emergency Blood Storage"
     ]
   };
 
@@ -368,11 +458,26 @@ function getEmergencyFallbackPlaces(category, userLoc) {
   ];
 
   const offsets = [
-    { dLat: 0.008, dLng: 0.006 },
-    { dLat: -0.012, dLng: 0.014 },
-    { dLat: 0.015, dLng: -0.011 },
-    { dLat: -0.006, dLng: -0.018 },
-    { dLat: 0.021, dLng: 0.009 }
+    { dLat: 0.005, dLng: 0.004 },
+    { dLat: -0.008, dLng: 0.012 },
+    { dLat: 0.012, dLng: -0.009 },
+    { dLat: -0.004, dLng: -0.015 },
+    { dLat: 0.018, dLng: 0.007 },
+    { dLat: -0.015, dLng: -0.006 },
+    { dLat: 0.022, dLng: -0.014 },
+    { dLat: -0.020, dLng: 0.018 },
+    { dLat: 0.009, dLng: -0.022 },
+    { dLat: -0.011, dLng: 0.025 },
+    { dLat: 0.027, dLng: 0.012 },
+    { dLat: -0.025, dLng: -0.020 },
+    { dLat: 0.014, dLng: 0.030 },
+    { dLat: -0.029, dLng: 0.005 },
+    { dLat: 0.032, dLng: -0.018 },
+    { dLat: -0.018, dLng: -0.032 },
+    { dLat: 0.003, dLng: 0.035 },
+    { dLat: -0.034, dLng: 0.015 },
+    { dLat: 0.038, dLng: 0.002 },
+    { dLat: -0.002, dLng: -0.038 }
   ];
 
   return selectedNames.map((name, i) => {
@@ -381,11 +486,11 @@ function getEmergencyFallbackPlaces(category, userLoc) {
     const itemLng = lng + off.dLng;
     return {
       id: `fallback-${category}-${i}`,
-      displayName: { text: name },
-      formattedAddress: `Emergency Zone ${i + 1}, Near Main Road, Patna, Bihar`,
+      displayName: name,
+      formattedAddress: `Emergency Zone ${i + 1}, Main Arterial Road, Patna, Bihar`,
       location: { lat: itemLat, lng: itemLng },
-      rating: (4.3 + (i % 5) * 0.1).toFixed(1),
-      userRatingCount: 120 + i * 45,
+      rating: (4.3 + (i % 6) * 0.1).toFixed(1),
+      userRatingCount: 85 + i * 32,
       internationalPhoneNumber: "+91 612 2300100",
       nationalPhoneNumber: "0612 2300100",
       websiteURI: "https://emergencyservices.gov.in",
@@ -541,9 +646,18 @@ function renderPlaceCard(place, index) {
   li.style.animationDelay = `${Math.min(index * 70, 420)}ms`;
   const phoneNum = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
 
+  let placeName = "Emergency Unit";
+  if (typeof place.displayName === "string") {
+    placeName = place.displayName;
+  } else if (place.displayName && place.displayName.text) {
+    placeName = place.displayName.text;
+  } else if (place.name) {
+    placeName = place.name;
+  }
+
   li.innerHTML = `
     <div class="card-top">
-      <h3>${place.displayName || "Emergency Unit"}</h3>
+      <h3>${placeName}</h3>
       ${statusHTML}
     </div>
     <div class="card-body">
@@ -562,7 +676,7 @@ function renderPlaceCard(place, index) {
         <span class="dist-badge">📍 ${distKm} km away</span>
         ${place.rating ? `<span class="rating-badge">⭐ ${place.rating} (${place.userRatingCount || 0})</span>` : ""}
       </div>
-      <button class="btn btn-route" data-index="${index}" aria-label="Navigate to ${place.displayName}">
+      <button class="btn btn-route" data-index="${index}" aria-label="Navigate to ${placeName}">
         <span>⚡ Quick Route</span>
       </button>
     </div>
