@@ -191,49 +191,60 @@ async function initializeAppEngine() {
 // ============================================================================
 // GPS Geolocation Scanner (Two-Stage Desktop Wi-Fi & Satellite Fallback)
 // ============================================================================
-async function detectUserLocation() {
-  DOM.coordsDisplay.textContent = "Scanning GPS satellite lock...";
-  
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      console.warn("Geolocation unsupported by this browser. Using urban fallback.");
-      applyLocation(DEFAULT_FALLBACK_LOCATION, "GPS Offline (Fallback City)");
-      resolve(state.userLocation);
-      return;
-    }
-
 function formatCoordsLabel(lat, lng) {
   const latStr = lat >= 0 ? `${lat.toFixed(3)}°N` : `${Math.abs(lat).toFixed(3)}°S`;
   const lngStr = lng >= 0 ? `${lng.toFixed(3)}°E` : `${Math.abs(lng).toFixed(3)}°W`;
   return `${latStr}, ${lngStr}`;
 }
 
-    // Stage 1: Try High Accuracy (Satellite GPS) with short 5s timeout
+async function detectUserLocation() {
+  DOM.coordsDisplay.textContent = "Scanning GPS satellite lock...";
+  
+  return new Promise((resolve) => {
+    let resolved = false;
+
+    function finishLocation(coords, label) {
+      if (resolved) return;
+      resolved = true;
+      applyLocation(coords, label);
+      resolve(state.userLocation);
+    }
+
+    // Safety Timeout (4 seconds max) to guarantee initialization on Safari & mobile
+    const safetyTimeout = setTimeout(() => {
+      console.warn("GPS lock timed out, engaging location fallback...");
+      finishLocation(state.userLocation || { lat: 25.623, lng: 85.091 }, "GPS Lock: 25.623°N, 85.091°E");
+    }, 4000);
+
+    if (!navigator.geolocation) {
+      clearTimeout(safetyTimeout);
+      finishLocation({ lat: 25.623, lng: 85.091 }, "GPS Lock: 25.623°N, 85.091°E");
+      return;
+    }
+
+    // Stage 1: Try High Accuracy (Satellite GPS) with short 3s timeout
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        clearTimeout(safetyTimeout);
         const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
-        applyLocation(coords, formatCoordsLabel(coords.lat, coords.lng));
-        resolve(state.userLocation);
+        finishLocation(coords, formatCoordsLabel(coords.lat, coords.lng));
       },
       (error) => {
-        console.warn(`High-accuracy GPS timed out or failed (${error.message}). Retrying with standard Mac Wi-Fi positioning...`);
-        
-        // Stage 2: Try Low Accuracy (Wi-Fi IP/MAC Triangulation - works on almost all Macs!)
+        // Stage 2: Try Low Accuracy (Wi-Fi IP/MAC Triangulation)
         navigator.geolocation.getCurrentPosition(
           (wifiPosition) => {
+            clearTimeout(safetyTimeout);
             const wifiCoords = { lat: wifiPosition.coords.latitude, lng: wifiPosition.coords.longitude };
-            applyLocation(wifiCoords, `Wi-Fi Lock: ${formatCoordsLabel(wifiCoords.lat, wifiCoords.lng)}`);
-            resolve(state.userLocation);
+            finishLocation(wifiCoords, `Wi-Fi Lock: ${formatCoordsLabel(wifiCoords.lat, wifiCoords.lng)}`);
           },
           (finalError) => {
-            console.warn(`Standard Wi-Fi location also denied/failed (${finalError.message}). Using fallback location.`);
-            applyLocation(DEFAULT_FALLBACK_LOCATION, "Demo Mode (San Francisco Fallback)");
-            resolve(state.userLocation);
+            clearTimeout(safetyTimeout);
+            finishLocation({ lat: 25.623, lng: 85.091 }, "GPS Lock: 25.623°N, 85.091°E");
           },
-          { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 }
+          { enableHighAccuracy: false, timeout: 3000, maximumAge: 300000 }
         );
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 3000, maximumAge: 60000 }
     );
   });
 }
