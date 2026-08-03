@@ -997,18 +997,15 @@ function setupHealthQuotes() {
 // Helper for ultra-smooth modal closing transition (Globally Accessible)
 function closeModalSmooth(modal) {
   if (!modal) return;
+  try {
+    if (typeof modal.close === "function" && modal.open) {
+      modal.close();
+    }
+  } catch(e) {}
+  try { modal.removeAttribute("open"); } catch(err) {}
   modal.classList.add("closing");
   setTimeout(() => {
     modal.classList.remove("closing");
-    try {
-      if (typeof modal.close === "function" && modal.open) {
-        modal.close();
-      } else {
-        modal.removeAttribute("open");
-      }
-    } catch(e) {
-      try { modal.removeAttribute("open"); } catch(err) {}
-    }
   }, 180);
 }
 
