@@ -895,7 +895,7 @@ function setupEventListeners() {
     setTimeout(() => {
       modal.classList.remove("closing");
       try { modal.close(); } catch(e) {}
-    }, 260);
+    }, 400);
   }
 
   // Modal Triggers

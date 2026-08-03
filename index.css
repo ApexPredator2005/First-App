@@ -811,7 +811,7 @@ body::after {
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .glass-modal[open], .glass-modal:modal {
@@ -820,24 +820,31 @@ body::after {
 }
 
 .glass-modal::backdrop {
-  background: rgba(4, 6, 12, 0.72);
-  backdrop-filter: blur(12px) saturate(1.4);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  background: rgba(4, 6, 12, 0.75);
+  backdrop-filter: blur(14px) saturate(1.5);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  opacity: 0;
+  transition: opacity 0.45s ease-out;
+}
+
+.glass-modal[open]::backdrop {
+  opacity: 1;
 }
 
 .modal-content {
-  background: rgba(22, 26, 35, 0.94);
-  backdrop-filter: blur(24px) saturate(1.6);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(22, 26, 35, 0.95);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--radius-xl);
   width: 90%;
   max-width: 500px;
   padding: 1.6rem;
-  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.6), inset 0 0.5px 0 rgba(255, 255, 255, 0.15);
-  transform: translateY(28px) scale(0.94);
+  box-shadow: 0 32px 72px rgba(0, 0, 0, 0.65), inset 0 0.5px 0 rgba(255, 255, 255, 0.18);
+  transform: translateY(36px) scale(0.92);
   opacity: 0;
-  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
 }
 
 .glass-modal[open] .modal-content {
@@ -848,11 +855,13 @@ body::after {
 .glass-modal.closing {
   opacity: 0;
   pointer-events: none;
+  transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .glass-modal.closing .modal-content {
-  transform: translateY(20px) scale(0.95);
+  transform: translateY(24px) scale(0.94);
   opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 0.8rem; }
