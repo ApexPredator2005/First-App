@@ -202,11 +202,17 @@ async function detectUserLocation() {
       return;
     }
 
+function formatCoordsLabel(lat, lng) {
+  const latStr = lat >= 0 ? `${lat.toFixed(3)}°N` : `${Math.abs(lat).toFixed(3)}°S`;
+  const lngStr = lng >= 0 ? `${lng.toFixed(3)}°E` : `${Math.abs(lng).toFixed(3)}°W`;
+  return `${latStr}, ${lngStr}`;
+}
+
     // Stage 1: Try High Accuracy (Satellite GPS) with short 5s timeout
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
-        applyLocation(coords, `${coords.lat.toFixed(3)}°N, ${coords.lng.toFixed(3)}°W`);
+        applyLocation(coords, formatCoordsLabel(coords.lat, coords.lng));
         resolve(state.userLocation);
       },
       (error) => {
@@ -216,7 +222,7 @@ async function detectUserLocation() {
         navigator.geolocation.getCurrentPosition(
           (wifiPosition) => {
             const wifiCoords = { lat: wifiPosition.coords.latitude, lng: wifiPosition.coords.longitude };
-            applyLocation(wifiCoords, `Wi-Fi Lock: ${wifiCoords.lat.toFixed(3)}°N, ${wifiCoords.lng.toFixed(3)}°W`);
+            applyLocation(wifiCoords, `Wi-Fi Lock: ${formatCoordsLabel(wifiCoords.lat, wifiCoords.lng)}`);
             resolve(state.userLocation);
           },
           (finalError) => {
@@ -442,7 +448,56 @@ async function performNearbySearch() {
     }
   }
 
-  // Strategy 2: If Places API (New) yielded no places or threw an error, engage emergency fallback facilities
+function searchWithClassicPlacesService(category, userLoc, radius) {
+  return new Promise((resolve) => {
+    if (!window.google || !google.maps || !google.maps.places || !state.map) {
+      resolve([]);
+      return;
+    }
+    try {
+      const service = new google.maps.places.PlacesService(state.map);
+      const meta = CATEGORY_META[category] || { label: "Emergency" };
+      
+      const request = {
+        location: userLoc,
+        radius: Number(radius),
+        type: category === "blood_bank" ? "hospital" : (category === "veterinary_care" ? "veterinary_care" : category),
+        keyword: meta.label
+      };
+
+      service.nearbySearch(request, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+          const formatted = results.map(p => ({
+            id: p.place_id,
+            displayName: p.name,
+            formattedAddress: p.vicinity || p.formatted_address || "Address near location",
+            location: p.geometry ? p.geometry.location : new google.maps.LatLng(userLoc.lat, userLoc.lng),
+            rating: p.rating || 4.2,
+            userRatingCount: p.user_ratings_total || 38,
+            types: p.types || [category],
+            currentOpeningHours: p.opening_hours ? { openNow: p.opening_hours.open_now } : null,
+            internationalPhoneNumber: null,
+            nationalPhoneNumber: null,
+            websiteURI: null
+          }));
+          resolve(formatted);
+        } else {
+          resolve([]);
+        }
+      });
+    } catch(e) {
+      console.warn("Classic PlacesService search error:", e);
+      resolve([]);
+    }
+  });
+}
+
+  // Strategy 2: If Places API (New) yielded no places, query Classic PlacesService
+  if (!places || places.length === 0) {
+    places = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius);
+  }
+
+  // Strategy 3: Dynamic Location-Aware Emergency Fallback
   if (!places || places.length === 0) {
     places = getEmergencyFallbackPlaces(category, state.userLocation);
   }
@@ -825,7 +880,22 @@ function setupHealthQuotes() {
   currentIndex = Math.floor(Math.random() * HEALTH_QUOTES.length);
   quoteText.textContent = HEALTH_QUOTES[currentIndex];
 
-  setInterval(rotateQuote, 60000); // Every 60 seconds
+// Helper for ultra-smooth modal closing transition (Globally Accessible)
+function closeModalSmooth(modal) {
+  if (!modal) return;
+  modal.classList.add("closing");
+  setTimeout(() => {
+    modal.classList.remove("closing");
+    try {
+      if (typeof modal.close === "function" && modal.open) {
+        modal.close();
+      } else {
+        modal.removeAttribute("open");
+      }
+    } catch(e) {
+      try { modal.removeAttribute("open"); } catch(err) {}
+    }
+  }, 180);
 }
 
 function setupEventListeners() {
@@ -935,16 +1005,6 @@ function setupEventListeners() {
       state.currentRoutePolyline = null;
     }
   });
-
-  // Helper for ultra-smooth modal closing transition
-  function closeModalSmooth(modal) {
-    if (!modal) return;
-    modal.classList.add("closing");
-    setTimeout(() => {
-      modal.classList.remove("closing");
-      try { modal.close(); } catch(e) {}
-    }, 400);
-  }
 
   // Modal Triggers
   DOM.openSettingsBtn.addEventListener("click", () => DOM.settingsModal.showModal());
