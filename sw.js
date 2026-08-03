@@ -1,9 +1,9 @@
-const CACHE_NAME = 'resqnow-v3';
+const CACHE_NAME = 'resqnow-v4';
 const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/index.css',
-  '/app.js'
+  './',
+  'index.html',
+  'index.css',
+  'app.js'
 ];
 
 // Install event - Cache app shell files

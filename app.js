@@ -827,18 +827,13 @@ function setupEventListeners() {
     if (e.target === DOM.settingsModal) DOM.settingsModal.close();
     if (e.target === DOM.placeModal) DOM.placeModal.close();
     if (e.target === DOM.locationModal) DOM.locationModal.close();
-    const profileModal = document.getElementById("profile-modal");
-    if (e.target === profileModal) profileModal.close();
     const healthModal = document.getElementById("health-modal");
     if (e.target === healthModal) healthModal.close();
   });
 
   // ====================================================================
-  // Medical Profile / My Account
+  // Medical Profile / My Account (Combined into Health Profile Modal)
   // ====================================================================
-  const profileModal = document.getElementById("profile-modal");
-  const openProfileBtn = document.getElementById("open-profile-btn");
-  const closeProfileBtn = document.getElementById("close-profile-modal");
   const saveProfileBtn = document.getElementById("save-profile-btn");
   const copyProfileBtn = document.getElementById("copy-profile-btn");
   const shareProfileBtn = document.getElementById("share-profile-btn");
@@ -860,10 +855,6 @@ function setupEventListeners() {
     });
   }
   loadProfile();
-
-  // Open / Close
-  if (openProfileBtn) openProfileBtn.addEventListener("click", () => profileModal.showModal());
-  if (closeProfileBtn) closeProfileBtn.addEventListener("click", () => profileModal.close());
 
   // Save
   if (saveProfileBtn) saveProfileBtn.addEventListener("click", () => {

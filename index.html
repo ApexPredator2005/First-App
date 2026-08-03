@@ -71,13 +71,9 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
           <span>API</span>
         </button>
-        <button id="open-health-btn" class="btn btn-health" title="My Illness History, Prescriptions & Doctor Reminders">
+        <button id="open-health-btn" class="btn btn-health" title="My Health Profile & Records">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-          <span>My Health</span>
-        </button>
-        <button id="open-profile-btn" class="btn btn-profile" title="My Medical Profile">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span>My Profile</span>
+          <span>My Health Profile</span>
         </button>
       </div>
     </header>
@@ -375,99 +371,93 @@
     </div>
   </dialog>
 
-  <!-- Medical Profile / My Account Modal -->
-  <dialog id="profile-modal" class="glass-modal">
-    <div class="modal-content profile-content">
-      <header class="modal-header">
-        <h2>🩺 My Medical Profile</h2>
-        <button id="close-profile-modal" class="btn-close" aria-label="Close profile">&times;</button>
-      </header>
-      <div class="modal-body profile-body">
-        <p class="settings-intro">Store your critical medical info locally on this device. Share it instantly with emergency responders or family.</p>
-        
-        <div class="profile-grid">
-          <div class="form-group">
-            <label for="profile-name">Full Name</label>
-            <input type="text" id="profile-name" placeholder="e.g., Pratyush Raj">
-          </div>
-          <div class="form-group">
-            <label for="profile-age">Age</label>
-            <input type="number" id="profile-age" placeholder="e.g., 25" min="0" max="150">
-          </div>
-          <div class="form-group">
-            <label for="profile-blood">Blood Group</label>
-            <select id="profile-blood">
-              <option value="">Select</option>
-              <option>A+</option><option>A-</option>
-              <option>B+</option><option>B-</option>
-              <option>AB+</option><option>AB-</option>
-              <option>O+</option><option>O-</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="profile-height">Height (cm)</label>
-            <input type="number" id="profile-height" placeholder="e.g., 175" min="0">
-          </div>
-          <div class="form-group">
-            <label for="profile-weight">Weight (kg)</label>
-            <input type="number" id="profile-weight" placeholder="e.g., 70" min="0">
-          </div>
-          <div class="form-group">
-            <label for="profile-emergency-contact">Emergency Contact No.</label>
-            <input type="tel" id="profile-emergency-contact" placeholder="e.g., +91 98765 43210">
-          </div>
-          <div class="form-group" style="grid-column: span 2;">
-            <label for="profile-sos-message">📝 Custom SOS Message (optional)</label>
-            <input type="text" id="profile-sos-message" placeholder="e.g., I need immediate help!">
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-top:0.75rem;">
-          <label for="profile-allergies">⚠️ Known Allergies</label>
-          <textarea id="profile-allergies" rows="2" placeholder="e.g., Penicillin, Peanuts, Latex..."></textarea>
-        </div>
-        <div class="form-group">
-          <label for="profile-conditions">🩻 Medical Conditions / Chronic Illnesses</label>
-          <textarea id="profile-conditions" rows="2" placeholder="e.g., Asthma, Diabetes Type 2, Hypertension..."></textarea>
-        </div>
-        <div class="form-group">
-          <label for="profile-medications">💊 Current Medications</label>
-          <textarea id="profile-medications" rows="2" placeholder="e.g., Metformin 500mg twice daily..."></textarea>
-        </div>
-        <div class="form-group">
-          <label for="profile-notes">📝 Additional Notes</label>
-          <textarea id="profile-notes" rows="2" placeholder="e.g., Organ donor, wears contact lenses..."></textarea>
-        </div>
-      </div>
-      <footer class="modal-footer profile-footer">
-        <button id="save-profile-btn" class="btn btn-primary">💾 Save Profile</button>
-        <button id="copy-profile-btn" class="btn btn-secondary">📋 Copy Info</button>
-        <button id="share-profile-btn" class="btn btn-whatsapp">📲 Share via WhatsApp</button>
-      </footer>
-    </div>
-  </dialog>
-
-  <!-- My Health Log & Reminders Modal -->
+  <!-- My Health Profile Modal (Combined Medical ID & Health Records) -->
   <dialog id="health-modal" class="glass-modal">
     <div class="modal-content health-modal-content">
       <header class="modal-header">
         <div class="modal-title-wrap">
-          <h2>🩺 My Health Records & Doctor Reminders</h2>
-          <p class="subtitle">Track past illnesses, prescription uploads, and scheduled doctor check-ups</p>
+          <h2>🩺 My Health Profile</h2>
+          <p class="subtitle">Manage your Medical ID, track illnesses, upload prescriptions, and set doctor reminders</p>
         </div>
         <button id="close-health-modal" class="btn-close" aria-label="Close health modal">&times;</button>
       </header>
 
       <!-- Navigation Sub-tabs -->
       <div class="health-nav-tabs">
-        <button class="health-tab-btn active" data-tab="illness-log">🤒 Illness History</button>
+        <button class="health-tab-btn active" data-tab="medical-profile">👤 Medical ID</button>
+        <button class="health-tab-btn" data-tab="illness-log">🤒 Illness History</button>
         <button class="health-tab-btn" data-tab="prescription-vault">📜 Prescription Vault</button>
         <button class="health-tab-btn" data-tab="doctor-reminders">🗓️ Doctor Reminders</button>
       </div>
 
       <div class="modal-body health-body">
-        <!-- TAB 1: Illness Log -->
-        <div id="tab-illness-log" class="health-tab-pane active">
+        <!-- TAB 1: Medical ID (Profile) -->
+        <div id="tab-medical-profile" class="health-tab-pane active">
+          <p class="settings-intro" style="margin-bottom:1rem;">Store your critical medical info locally on this device. Share it instantly with emergency responders or family.</p>
+          
+          <div class="profile-grid">
+            <div class="form-group">
+              <label for="profile-name">Full Name</label>
+              <input type="text" id="profile-name" placeholder="e.g., Pratyush Raj">
+            </div>
+            <div class="form-group">
+              <label for="profile-age">Age</label>
+              <input type="number" id="profile-age" placeholder="e.g., 25" min="0" max="150">
+            </div>
+            <div class="form-group">
+              <label for="profile-blood">Blood Group</label>
+              <select id="profile-blood">
+                <option value="">Select</option>
+                <option>A+</option><option>A-</option>
+                <option>B+</option><option>B-</option>
+                <option>AB+</option><option>AB-</option>
+                <option>O+</option><option>O-</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="profile-height">Height (cm)</label>
+              <input type="number" id="profile-height" placeholder="e.g., 175" min="0">
+            </div>
+            <div class="form-group">
+              <label for="profile-weight">Weight (kg)</label>
+              <input type="number" id="profile-weight" placeholder="e.g., 70" min="0">
+            </div>
+            <div class="form-group">
+              <label for="profile-emergency-contact">Emergency Contact No.</label>
+              <input type="tel" id="profile-emergency-contact" placeholder="e.g., +91 98765 43210">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label for="profile-sos-message">📝 Custom SOS Message (optional)</label>
+              <input type="text" id="profile-sos-message" placeholder="e.g., I need immediate help!">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:0.75rem;">
+            <label for="profile-allergies">⚠️ Known Allergies</label>
+            <textarea id="profile-allergies" rows="2" placeholder="e.g., Penicillin, Peanuts, Latex..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="profile-conditions">🩻 Medical Conditions / Chronic Illnesses</label>
+            <textarea id="profile-conditions" rows="2" placeholder="e.g., Asthma, Diabetes Type 2, Hypertension..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="profile-medications">💊 Current Medications</label>
+            <textarea id="profile-medications" rows="2" placeholder="e.g., Metformin 500mg twice daily..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="profile-notes">📝 Additional Notes</label>
+            <textarea id="profile-notes" rows="2" placeholder="e.g., Organ donor, wears contact lenses..."></textarea>
+          </div>
+
+          <div class="health-form-box" style="margin-top: 1rem; padding: 0.75rem; display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap;">
+            <button id="save-profile-btn" class="btn btn-primary">💾 Save Profile</button>
+            <button id="copy-profile-btn" class="btn btn-secondary">📋 Copy Info</button>
+            <button id="share-profile-btn" class="btn btn-whatsapp">📲 Share via WhatsApp</button>
+          </div>
+        </div>
+
+        <!-- TAB 2: Illness Log -->
+        <div id="tab-illness-log" class="health-tab-pane">
           <form id="add-illness-form" class="health-form-box">
             <h4>➕ Log New Illness / Health Incident</h4>
             <div class="profile-grid">
