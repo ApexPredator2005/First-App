@@ -94,10 +94,8 @@ const DOM = {
   modalRouteBtn: document.getElementById("modal-route-btn")
 };
 
-// ============================================================================
 // Initialization & Key Governance
-// ============================================================================
-document.addEventListener("DOMContentLoaded", async () => {
+async function initApp() {
   setupEventListeners();
   await loadStoredSettings();
 
@@ -107,7 +105,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   } else {
     await initializeAppEngine();
   }
-});
+}
+
+if (document.readyState === "complete" || document.readyState === "interactive") {
+  initApp();
+} else {
+  document.addEventListener("DOMContentLoaded", initApp);
+}
 
 async function loadStoredSettings() {
   let defaultKey = "";
@@ -180,12 +184,25 @@ async function initializeAppEngine() {
     // 4. Perform Initial Proximity Scan
     await performNearbySearch();
 
+    // 5. Initialize all category pill counts
+    initializeAllPillCounts();
+
   } catch (error) {
     console.error("Critical API Initialization Failure:", error);
     DOM.feedStatus.textContent = "⚠️ Map initialization failed. Please check your API Key / Demo Key settings.";
     DOM.spinner.style.display = "none";
     DOM.settingsModal.showModal();
   }
+}
+
+function initializeAllPillCounts() {
+  Object.keys(CATEGORY_META).forEach(cat => {
+    const countSpan = document.getElementById(`count-${cat}`);
+    if (countSpan) {
+      const count = (cat === state.currentCategory) ? state.placesList.length : 20;
+      animateCountUp(countSpan, count);
+    }
+  });
 }
 
 // ============================================================================
