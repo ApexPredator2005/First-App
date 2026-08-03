@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResQNow | Nearest Emergency Services & Live Traffic Routes</title>
+  <meta name="description" content="ResQNow — find the nearest hospitals, police stations, fire departments and pharmacies around you with live traffic-aware routing powered by Google Maps Platform.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007aff">
+</head>
+<body>
+  <!-- Ambient Living Cyber-Plasma Background & Grid -->
+  <div class="ambient-background" aria-hidden="true">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+    <div class="glow-orb orb-4"></div>
+    <div class="cyber-grid"></div>
+  </div>
+
+  <div id="app-container" class="app-container">
+    <!-- Top Glass Navigation Bar -->
+    <header class="app-header glass-panel">
+      <div class="logo-group">
+        <div class="logo-icon-wrap">
+          <div class="logo-icon heartbeat">🚨</div>
+          <span class="pulse-ring-outer"></span>
+        </div>
+        <div class="logo-text">
+          <h1>ResQNow</h1>
+          <span class="tagline">FIND HELP. FAST. ANYWHERE.</span>
+        </div>
+      </div>
+
+      <!-- Rotating Health Quote Ticker -->
+      <div class="health-quote-ticker" id="health-quote-ticker">
+        <span class="quote-icon">💡</span>
+        <span class="quote-text" id="quote-text">Invest in your body now, or pay interest on your health later.</span>
+      </div>
+
+      <!-- Real-Time Geolocation & Scan Tools -->
+      <div class="nav-controls">
+        <div class="status-badge gps-badge" id="location-status" title="Your current detected coordinates">
+          <span class="status-dot pulsing"></span>
+          <span id="coordinates-display">Scanning GPS Lock...</span>
+          <button id="rescan-btn" title="Re-scan GPS location" aria-label="Re-scan current location">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          </button>
+          <button id="open-location-modal-btn" class="btn-tiny" title="Set address manually">
+            <span>Change</span>
+          </button>
+        </div>
+
+        <!-- Search Radius Dropdown -->
+        <div class="control-group">
+          <label for="radius-select">Radius:</label>
+          <select id="radius-select" aria-label="Search radius in kilometers">
+            <option value="2000">2 km (Immediate Area)</option>
+            <option value="5000" selected>5 km (Standard Range)</option>
+            <option value="10000">10 km (Extended City Range)</option>
+            <option value="25000">25 km (Regional Search)</option>
+          </select>
+        </div>
+
+        <!-- API Config Trigger -->
+        <button id="open-settings-btn" class="btn btn-settings" title="Configure Google Maps Demo Key / API Key">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>API</span>
+        </button>
+        <button id="open-health-btn" class="btn btn-health" title="My Illness History, Prescriptions & Doctor Reminders">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>My Health</span>
+        </button>
+        <button id="open-profile-btn" class="btn btn-profile" title="My Medical Profile">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>My Profile</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Matrix -->
+    <main class="main-workspace">
+      <!-- Left Sidebar: Category Selector & Live Results Feed -->
+      <aside class="sidebar-panel glass-panel" style="order:1;">
+        <div class="sidebar-header">
+          <h2>Emergency Squadrons</h2>
+          <p>Select a category to find active emergency units near you</p>
+        </div>
+
+        <!-- Vibrant Interactive Category Pills -->
+        <nav class="category-pills" aria-label="Emergency category selectors">
+          <button class="pill pill-hospital active" data-category="hospital" aria-label="Show nearby hospitals">
+            <span class="pill-icon">🏥</span>
+            <span class="pill-label">Hospitals</span>
+            <span class="pill-count" id="count-hospital">0</span>
+            <div class="pill-glow"></div>
+          </button>
+          <button class="pill pill-police" data-category="police" aria-label="Show nearby police stations">
+            <span class="pill-icon">🚓</span>
+            <span class="pill-label">Police</span>
+            <span class="pill-count" id="count-police">0</span>
+            <div class="pill-glow"></div>
+          </button>
+          <button class="pill pill-fire" data-category="fire_station" aria-label="Show nearby fire stations">
+            <span class="pill-icon">🚒</span>
+            <span class="pill-label">Fire Stations</span>
+            <span class="pill-count" id="count-fire_station">0</span>
+            <div class="pill-glow"></div>
+          </button>
+          <button class="pill pill-pharmacy" data-category="pharmacy" aria-label="Show nearby pharmacies">
+            <span class="pill-icon">💊</span>
+            <span class="pill-label">Pharmacies</span>
+            <span class="pill-count" id="count-pharmacy">0</span>
+            <div class="pill-glow"></div>
+          </button>
+          <button class="pill pill-vet" data-category="veterinary_care" aria-label="Show nearby veterinary clinics">
+            <span class="pill-icon">🐾</span>
+            <span class="pill-label">Vet Clinics</span>
+            <span class="pill-count" id="count-veterinary_care">0</span>
+            <div class="pill-glow"></div>
+          </button>
+          <button class="pill pill-blood" data-category="blood_bank" aria-label="Show nearby blood banks">
+            <span class="pill-icon">🩸</span>
+            <span class="pill-label">Blood Banks</span>
+            <span class="pill-count" id="count-blood_bank">0</span>
+            <div class="pill-glow"></div>
+          </button>
+        </nav>
+
+        <!-- Dynamic Results Feed -->
+        <section class="results-section" aria-live="polite">
+          <div class="results-toolbar">
+            <span id="feed-status" class="feed-status">Awaiting radar lock...</span>
+            <div class="spinner" id="spinner" aria-hidden="true"></div>
+          </div>
+          
+          <!-- Scrollable Card List -->
+          <ul id="places-feed" class="places-feed">
+            <li class="empty-state-card">
+              <span class="empty-icon">🛰️</span>
+              <p>Scanning surrounding coordinates... Select a category above to view immediate response units.</p>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Emergency Hotline Footer Banner -->
+        <footer class="sidebar-footer">
+          <div class="emergency-banner">
+            <div class="helpline-header">
+              <span class="alert-icon">🆘</span>
+              <strong>Emergency Helplines (India)</strong>
+            </div>
+            <div class="helpline-scroll">
+              <div class="helpline-row"><span>👮 Police</span><a href="tel:100" class="helpline-num">100</a></div>
+              <div class="helpline-row"><span>🚒 Fire Dept</span><a href="tel:101" class="helpline-num">101</a></div>
+              <div class="helpline-row"><span>🚑 Ambulance</span><a href="tel:102" class="helpline-num">102</a></div>
+              <div class="helpline-row"><span>👶 Child Helpline</span><a href="tel:1098" class="helpline-num">1098</a></div>
+              <div class="helpline-row"><span>👩 Women Helpline</span><a href="tel:1091" class="helpline-num">1091</a></div>
+              <div class="helpline-row"><span>🛡️ Cyber Crime</span><a href="tel:1930" class="helpline-num">1930</a></div>
+              <div class="helpline-row"><span>🌊 Disaster Mgmt</span><a href="tel:1078" class="helpline-num">1078</a></div>
+              <div class="helpline-row"><span>🎓 Anti-Ragging</span><a href="tel:18001805522" class="helpline-num">1800-180-5522</a></div>
+              <div class="helpline-row"><span>✈️ Air Accident</span><a href="tel:1800114747" class="helpline-num">1800-11-4747</a></div>
+              <div class="helpline-row"><span>🐾 Animal Helpline</span><a href="tel:1962" class="helpline-num">1962</a></div>
+            </div>
+          </div>
+        </footer>
+      </aside>
+
+      <!-- Left Interactive Map Display -->
+      <section id="map-container" class="map-stage glass-panel" style="order:2;">
+        <!-- Interactive Google Maps Canvas (Explicitly height sized to prevent CF2 error) -->
+        <div id="map" class="map-canvas" aria-label="Interactive map showing your location and nearby emergency services"></div>
+        
+        <!-- Live Traffic Turn-by-Turn HUD (Appears when route is active) -->
+        <div id="route-hud" class="route-hud glass-floating hidden" aria-live="polite">
+          <header class="hud-header">
+            <div class="hud-title">
+              <span class="hud-pulse"></span>
+              <h3>🧭 Shortest Route Navigation</h3>
+            </div>
+            <button id="close-hud-btn" class="btn-close-hud" aria-label="Cancel active navigation">&times;</button>
+          </header>
+          <div class="hud-body">
+            <div class="hud-stat-box">
+              <span class="stat-label">Estimated Time</span>
+              <span id="route-duration" class="stat-value highlight">-- min</span>
+            </div>
+            <div class="hud-stat-box">
+              <span class="stat-label">Driving Distance</span>
+              <span id="route-distance" class="stat-value">-- km</span>
+            </div>
+            <div class="hud-stat-box full-width">
+              <span class="stat-label">Route Summary</span>
+              <p id="route-summary" class="stat-text">Optimal shortest path selected.</p>
+            </div>
+            <!-- Step-by-Step Turn Instructions -->
+            <div class="hud-stat-box full-width turn-steps-container" id="turn-steps-box" style="display:none;">
+              <span class="stat-label">📋 Turn-by-Turn Directions</span>
+              <ol id="turn-steps-list" class="turn-steps-list"></ol>
+            </div>
+          </div>
+          <footer class="hud-footer" style="display:flex;gap:0.5rem;">
+            <button id="start-nav-btn" class="btn btn-action btn-pulse" style="flex:1;">
+              <span>🧭 Start In-App Navigation</span>
+            </button>
+            <a id="nav-external-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="flex:0;white-space:nowrap;padding:0.6rem 0.9rem;font-size:0.78rem;">
+              <span>↗ Google Maps</span>
+            </a>
+          </footer>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Floating SOS Emergency Button -->
+  <button id="sos-btn" class="sos-button" aria-label="Emergency SOS">
+    <span class="sos-icon">🆘</span>
+    <span class="sos-text">SOS</span>
+    <div class="sos-pulse-ring"></div>
+  </button>
+
+  <!-- SOS Active Status Bar -->
+  <div id="sos-status-bar" class="sos-status-bar hidden">
+    <span class="sos-blink"></span>
+    <span>📡 SOS ACTIVE — Sending live location...</span>
+    <button id="sos-cancel-btn" class="btn-tiny">✕ Cancel SOS</button>
+  </div>
+
+  <!-- SOS Confirmation Modal -->
+  <dialog id="sos-modal" class="glass-modal">
+    <div class="modal-content sos-modal-content">
+      <header class="modal-header">
+        <h2>🆘 Emergency SOS</h2>
+        <button id="close-sos-modal" class="btn-close">&times;</button>
+      </header>
+      <div class="modal-body">
+        <p class="sos-warning">This will start sending your <strong>continuous live GPS location</strong> to your emergency contact via WhatsApp.</p>
+        <div class="form-group">
+          <label for="sos-phone">📞 Send location to (phone number):</label>
+          <input type="tel" id="sos-phone" placeholder="e.g., +91 98765 43210">
+          <small>Uses your profile's emergency contact by default.</small>
+        </div>
+      </div>
+      <footer class="modal-footer" style="gap:0.6rem;">
+        <button id="sos-confirm-btn" class="btn btn-sos-confirm">🚨 ACTIVATE SOS</button>
+        <button id="sos-modal-cancel" class="btn btn-secondary" style="flex:1;">Cancel</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- In-App Navigation Overlay -->
+  <div id="nav-overlay" class="nav-overlay hidden">
+    <div class="nav-top-bar">
+      <div class="nav-current-step">
+        <span id="nav-step-icon" class="nav-step-icon">➡️</span>
+        <div class="nav-step-text">
+          <p id="nav-instruction" class="nav-instruction">Calculating route...</p>
+          <span id="nav-step-dist" class="nav-step-dist"></span>
+        </div>
+      </div>
+      <button id="exit-nav-btn" class="btn-exit-nav">✕ Exit</button>
+    </div>
+    <div class="nav-bottom-bar">
+      <div class="nav-eta">
+        <span class="nav-eta-label">ETA</span>
+        <span id="nav-eta-value" class="nav-eta-value">--</span>
+      </div>
+      <div class="nav-remaining">
+        <span class="nav-eta-label">Remaining</span>
+        <span id="nav-remaining-value" class="nav-eta-value">--</span>
+      </div>
+      <div id="nav-next-step" class="nav-next-step">
+        <span class="nav-eta-label">Next</span>
+        <span id="nav-next-text" class="nav-next-text">--</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offline Banner -->
+  <div id="offline-banner" class="offline-banner hidden">
+    <span>📡 You are offline — app cached for emergency use</span>
+  </div>
+
+  <!-- =====================================================================
+       Modals & Interactive Popups (Defaults to display:none when closed)
+       ===================================================================== -->
+  <!-- Facility Details Dialog -->
+  <dialog id="place-modal" class="glass-modal">
+    <div class="modal-content place-details-content">
+      <header class="modal-header">
+        <h2 id="modal-place-name">Facility Name</h2>
+        <button id="close-place-modal" class="btn-close" aria-label="Close modal">&times;</button>
+      </header>
+      <div class="modal-body" id="modal-place-details">
+        <!-- populated dynamically via JS -->
+      </div>
+      <footer class="modal-footer">
+        <button id="modal-route-btn" class="btn btn-primary">
+          <span>⚡ Generate Live Route</span>
+        </button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- Custom Address Search Modal -->
+  <dialog id="location-modal" class="glass-modal">
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2>📍 Set Custom Scan Epicenter</h2>
+        <button id="close-location-modal" class="btn-close" aria-label="Close location modal">&times;</button>
+      </header>
+      <div class="modal-body">
+        <p class="settings-intro">
+          If automatic desktop GPS is unavailable or blocked by macOS System Privacy, enter any street address, neighborhood, or city below to instantly re-center the map and scan emergency squadrons.
+        </p>
+        <div class="form-group">
+          <label for="custom-location-input">Search City, Zip Code, or Street Address:</label>
+          <div class="input-group">
+            <input type="text" id="custom-location-input" placeholder="e.g., 5th Avenue New York, or Central London..." autocomplete="off">
+            <button id="search-location-btn" class="btn btn-primary">Scan Here</button>
+          </div>
+          <small id="location-error-text" class="error-text hidden">Unable to find coordinates for this address.</small>
+        </div>
+        <div class="alert alert-info" style="margin-top: 1.25rem;">
+          <strong>💡 Pro Tip: Instant Map Touchdown</strong>
+          <ul>
+            <li><strong>Right-click (or two-finger tap) anywhere on the map canvas</strong> to drop your emergency starting beacon instantly!</li>
+            <li>You can also click and drag your pulsing cyan locator pin across the map at any time!</li>
+          </ul>
+        </div>
+      </div>
+      <footer class="modal-footer">
+        <button id="retry-gps-btn" class="btn btn-secondary">
+          <span>🔄 Re-attempt Browser GPS Lock</span>
+        </button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- Google Maps Platform API Settings & Demo Key Modal -->
+  <dialog id="settings-modal" class="glass-modal">
+    <div class="modal-content settings-content">
+      <header class="modal-header">
+        <h2>🔑 Google Maps Platform Configuration</h2>
+        <button id="close-settings-modal" class="btn-close" aria-label="Close configuration modal">&times;</button>
+      </header>
+      <div class="modal-body">
+        <div class="quickstart-box">
+          <h3>⚡ Instant Zero-Cost Prototyping!</h3>
+          <p>You can test this interactive application immediately with NO credit card or billing account needed. Generate a FREE Maps Demo Key in 5 seconds:</p>
+          <a href="https://mapsplatform.google.com/maps-demo-key?utm_campaign=gmp_git_agentskills_v1" target="_blank" rel="noopener noreferrer" class="btn btn-demo-key">
+            <span>🎁 Claim FREE Google Maps Demo Key</span>
+          </a>
+        </div>
+        <div class="form-group" style="margin-top: 1.5rem;">
+          <label for="api-key-input">Paste Your Google Maps API Key or Demo Key:</label>
+          <input type="text" id="api-key-input" placeholder="AIzaSy... or test-demo-key..." autocomplete="off" spellcheck="false">
+          <small>Required to unlock Places API (New) nearby searches & Routes API turn-by-turn vectors.</small>
+        </div>
+        <div class="form-group">
+          <label for="map-id-input">Map ID (For 3D Vector Advanced Markers):</label>
+          <input type="text" id="map-id-input" value="DEMO_MAP_ID" autocomplete="off">
+          <small>Leave as <code>DEMO_MAP_ID</code> to test Advanced Markers without cloud setup (prevents CF9 map error).</small>
+        </div>
+      </div>
+      <footer class="modal-footer">
+        <button id="save-settings-btn" class="btn btn-primary btn-save">
+          <span>💾 Save & Launch Map Engine</span>
+        </button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- Medical Profile / My Account Modal -->
+  <dialog id="profile-modal" class="glass-modal">
+    <div class="modal-content profile-content">
+      <header class="modal-header">
+        <h2>🩺 My Medical Profile</h2>
+        <button id="close-profile-modal" class="btn-close" aria-label="Close profile">&times;</button>
+      </header>
+      <div class="modal-body profile-body">
+        <p class="settings-intro">Store your critical medical info locally on this device. Share it instantly with emergency responders or family.</p>
+        
+        <div class="profile-grid">
+          <div class="form-group">
+            <label for="profile-name">Full Name</label>
+            <input type="text" id="profile-name" placeholder="e.g., Pratyush Raj">
+          </div>
+          <div class="form-group">
+            <label for="profile-age">Age</label>
+            <input type="number" id="profile-age" placeholder="e.g., 25" min="0" max="150">
+          </div>
+          <div class="form-group">
+            <label for="profile-blood">Blood Group</label>
+            <select id="profile-blood">
+              <option value="">Select</option>
+              <option>A+</option><option>A-</option>
+              <option>B+</option><option>B-</option>
+              <option>AB+</option><option>AB-</option>
+              <option>O+</option><option>O-</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="profile-height">Height (cm)</label>
+            <input type="number" id="profile-height" placeholder="e.g., 175" min="0">
+          </div>
+          <div class="form-group">
+            <label for="profile-weight">Weight (kg)</label>
+            <input type="number" id="profile-weight" placeholder="e.g., 70" min="0">
+          </div>
+          <div class="form-group">
+            <label for="profile-emergency-contact">Emergency Contact No.</label>
+            <input type="tel" id="profile-emergency-contact" placeholder="e.g., +91 98765 43210">
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label for="profile-sos-message">📝 Custom SOS Message (optional)</label>
+            <input type="text" id="profile-sos-message" placeholder="e.g., I need immediate help!">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:0.75rem;">
+          <label for="profile-allergies">⚠️ Known Allergies</label>
+          <textarea id="profile-allergies" rows="2" placeholder="e.g., Penicillin, Peanuts, Latex..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="profile-conditions">🩻 Medical Conditions / Chronic Illnesses</label>
+          <textarea id="profile-conditions" rows="2" placeholder="e.g., Asthma, Diabetes Type 2, Hypertension..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="profile-medications">💊 Current Medications</label>
+          <textarea id="profile-medications" rows="2" placeholder="e.g., Metformin 500mg twice daily..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="profile-notes">📝 Additional Notes</label>
+          <textarea id="profile-notes" rows="2" placeholder="e.g., Organ donor, wears contact lenses..."></textarea>
+        </div>
+      </div>
+      <footer class="modal-footer profile-footer">
+        <button id="save-profile-btn" class="btn btn-primary">💾 Save Profile</button>
+        <button id="copy-profile-btn" class="btn btn-secondary">📋 Copy Info</button>
+        <button id="share-profile-btn" class="btn btn-whatsapp">📲 Share via WhatsApp</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- My Health Log & Reminders Modal -->
+  <dialog id="health-modal" class="glass-modal">
+    <div class="modal-content health-modal-content">
+      <header class="modal-header">
+        <div class="modal-title-wrap">
+          <h2>🩺 My Health Records & Doctor Reminders</h2>
+          <p class="subtitle">Track past illnesses, prescription uploads, and scheduled doctor check-ups</p>
+        </div>
+        <button id="close-health-modal" class="btn-close" aria-label="Close health modal">&times;</button>
+      </header>
+
+      <!-- Navigation Sub-tabs -->
+      <div class="health-nav-tabs">
+        <button class="health-tab-btn active" data-tab="illness-log">🤒 Illness History</button>
+        <button class="health-tab-btn" data-tab="prescription-vault">📜 Prescription Vault</button>
+        <button class="health-tab-btn" data-tab="doctor-reminders">🗓️ Doctor Reminders</button>
+      </div>
+
+      <div class="modal-body health-body">
+        <!-- TAB 1: Illness Log -->
+        <div id="tab-illness-log" class="health-tab-pane active">
+          <form id="add-illness-form" class="health-form-box">
+            <h4>➕ Log New Illness / Health Incident</h4>
+            <div class="profile-grid">
+              <div class="form-group">
+                <label for="illness-name">Illness / Condition Name *</label>
+                <input type="text" id="illness-name" placeholder="e.g., Seasonal Flu, Migraine, Typhoid" required>
+              </div>
+              <div class="form-group">
+                <label for="illness-date">Date Sick / Diagnosed *</label>
+                <input type="date" id="illness-date" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="illness-symptoms">Symptoms Experienced</label>
+              <input type="text" id="illness-symptoms" placeholder="e.g., High fever 102F, body ache, sore throat">
+            </div>
+            <div class="profile-grid">
+              <div class="form-group">
+                <label for="illness-status">Recovery Status</label>
+                <select id="illness-status">
+                  <option value="Recovered">🟢 Fully Recovered</option>
+                  <option value="Ongoing">🟡 Ongoing / Under Treatment</option>
+                  <option value="Chronic">🔴 Chronic Condition</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="illness-doctor">Treating Doctor / Hospital</label>
+                <input type="text" id="illness-doctor" placeholder="e.g., Dr. Sharma (AIIMS Patna)">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">+ Save Illness Record</button>
+          </form>
+
+          <h4 style="margin: 1.25rem 0 0.5rem;">📜 Medical Incident History</h4>
+          <ul id="illness-history-list" class="health-card-list">
+            <li class="empty-health-card">No illness records logged yet. Add your first record above!</li>
+          </ul>
+        </div>
+
+        <!-- TAB 2: Prescription Vault -->
+        <div id="tab-prescription-vault" class="health-tab-pane">
+          <form id="add-prescription-form" class="health-form-box">
+            <h4>➕ Upload Prescription Record</h4>
+            <div class="profile-grid">
+              <div class="form-group">
+                <label for="rx-title">Prescription Title / Doctor *</label>
+                <input type="text" id="rx-title" placeholder="e.g., Dr. Mehta - Antibiotics & Blood Test" required>
+              </div>
+              <div class="form-group">
+                <label for="rx-date">Prescription / Upload Date *</label>
+                <input type="date" id="rx-date" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="rx-medicines">Prescribed Medications & Dosage</label>
+              <textarea id="rx-medicines" rows="2" placeholder="e.g., Paracetamol 650mg TDS x 5 days, Azithromycin 500mg OD x 3 days"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="rx-file">📎 Upload Prescription Document / Photo (JPEG, PNG, PDF)</label>
+              <input type="file" id="rx-file" accept="image/*,application/pdf">
+              <small>Files are stored securely on your local device storage.</small>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">+ Upload & Save Prescription</button>
+          </form>
+
+          <h4 style="margin: 1.25rem 0 0.5rem;">📂 Stored Prescriptions</h4>
+          <ul id="prescription-list" class="health-card-list">
+            <li class="empty-health-card">No prescription records uploaded yet.</li>
+          </ul>
+        </div>
+
+        <!-- TAB 3: Doctor Visit Reminders -->
+        <div id="tab-doctor-reminders" class="health-tab-pane">
+          <form id="add-reminder-form" class="health-form-box">
+            <h4>⏰ Schedule Doctor Visit & Periodic Reminder</h4>
+            <div class="profile-grid">
+              <div class="form-group">
+                <label for="rem-doctor">Doctor / Clinic Name *</label>
+                <input type="text" id="rem-doctor" placeholder="e.g., Dr. Verma (Cardiologist)" required>
+              </div>
+              <div class="form-group">
+                <label for="rem-date">Next Appointment Date & Time *</label>
+                <input type="datetime-local" id="rem-date" required>
+              </div>
+            </div>
+            <div class="profile-grid">
+              <div class="form-group">
+                <label for="rem-recurrence">Reminder Frequency (Periodic)</label>
+                <select id="rem-recurrence">
+                  <option value="One-time">One-time Visit</option>
+                  <option value="Monthly">🗓️ Monthly Check-up</option>
+                  <option value="Quarterly">🗓️ Quarterly (Every 3 Months)</option>
+                  <option value="Half-Yearly">🗓️ Half-Yearly (Every 6 Months)</option>
+                  <option value="Yearly">🗓️ Yearly Annual Health Check-up</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="rem-notes">Visit Purpose / Instructions</label>
+                <input type="text" id="rem-notes" placeholder="e.g., Fasting blood test prior to visit">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">+ Save Doctor Reminder</button>
+          </form>
+
+          <h4 style="margin: 1.25rem 0 0.5rem;">🔔 Upcoming Doctor Check-ups & Reminders</h4>
+          <ul id="reminders-list" class="health-card-list">
+            <li class="empty-health-card">No upcoming doctor reminders set.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

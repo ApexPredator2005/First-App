@@ -1,0 +1,22 @@
+{
+  "name": "emergency-pulse-resq",
+  "version": "1.0.0",
+  "description": "Modern interactive emergency services locator and real-time route planner powered by Google Maps Platform JS SDK (Places API New & Routes API).",
+  "main": "app.js",
+  "scripts": {
+    "start": "npx serve . -p 3000",
+    "dev": "npx serve . -p 3000",
+    "test": "echo \"Error: no test specified\" && exit 0"
+  },
+  "keywords": [
+    "google-maps-platform",
+    "places-api-new",
+    "routes-api",
+    "advanced-markers",
+    "emergency-services",
+    "resq",
+    "glassmorphism"
+  ],
+  "author": "Antigravity Pair Programming Team",
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,1452 @@
+// ============================================================================
+// Emergency Pulse (ResQ) Application Engine
+// Governed by Google Maps Platform Modern SDK Rules & Compliance Checkpoints
+// ============================================================================
+// Source / Compliance Attribution ID: gmp_git_agentskills_v1
+// ============================================================================
+
+import { Loader } from "https://esm.run/@googlemaps/js-api-loader@1.16.8";
+
+// Global App State
+const state = {
+  userLocation: null,      // { lat, lng }
+  currentCategory: "hospital", // 'hospital' | 'police' | 'fire_station' | 'pharmacy'
+  searchRadius: 5000,      // in meters
+  map: null,
+  loader: null,
+  libraries: {},           // Holds loaded maps, places, routes, markers libs
+  placeMarkers: [],        // Active AdvancedMarkerElement instances on map
+  currentRoutePolyline: null,
+  apiKey: "",
+  mapId: "DEMO_MAP_ID",    // Mandatory for AdvancedMarkerElement (CF9)
+  placesList: [],          // Active fetched results
+  selectedPlace: null,
+  // SOS State
+  sosActive: false,
+  sosWatchId: null,
+  sosInterval: null,
+  sosPhoneNumber: "",
+  // Navigation State
+  navActive: false,
+  navWatchId: null,
+  navSteps: [],
+  navCurrentStepIndex: 0,
+  navDestination: null,
+  lastRouteResponse: null
+};
+
+// Category Metadata Mapping
+const CATEGORY_META = {
+  hospital: { label: "Hospitals & Medical", icon: "🏥", color: "#ff3366" },
+  police: { label: "Police Stations", icon: "🚓", color: "#3b82f6" },
+  fire_station: { label: "Fire Stations", icon: "🚒", color: "#ff6a00" },
+  pharmacy: { label: "24/7 Pharmacies", icon: "💊", color: "#10b981" },
+  veterinary_care: { label: "Veterinary Clinics", icon: "🐾", color: "#a855f7" },
+  blood_bank: { label: "Blood Banks", icon: "🩸", color: "#ef4444" }
+};
+
+// Default Safe Urban Fallback (if GPS permission denied or testing headless)
+const DEFAULT_FALLBACK_LOCATION = { lat: 37.7749, lng: -122.4194 }; // San Francisco Metro
+
+// DOM Elements Reference
+const DOM = {
+  coordsDisplay: document.getElementById("coordinates-display"),
+  rescanBtn: document.getElementById("rescan-btn"),
+  openLocationModalBtn: document.getElementById("open-location-modal-btn"),
+  radiusSelect: document.getElementById("radius-select"),
+  openSettingsBtn: document.getElementById("open-settings-btn"),
+  pills: document.querySelectorAll(".category-pills .pill"),
+  feedStatus: document.getElementById("feed-status"),
+  spinner: document.getElementById("spinner"),
+  placesFeed: document.getElementById("places-feed"),
+  mapContainer: document.getElementById("map"),
+  routeHud: document.getElementById("route-hud"),
+  closeHudBtn: document.getElementById("close-hud-btn"),
+  routeDuration: document.getElementById("route-duration"),
+  routeDistance: document.getElementById("route-distance"),
+  routeSummary: document.getElementById("route-summary"),
+  navExternalBtn: document.getElementById("nav-external-btn"),
+  
+  // Modals
+  locationModal: document.getElementById("location-modal"),
+  closeLocationModal: document.getElementById("close-location-modal"),
+  customLocationInput: document.getElementById("custom-location-input"),
+  searchLocationBtn: document.getElementById("search-location-btn"),
+  locationErrorText: document.getElementById("location-error-text"),
+  retryGpsBtn: document.getElementById("retry-gps-btn"),
+
+  settingsModal: document.getElementById("settings-modal"),
+  closeSettingsModal: document.getElementById("close-settings-modal"),
+  apiKeyInput: document.getElementById("api-key-input"),
+  mapIdInput: document.getElementById("map-id-input"),
+  saveSettingsBtn: document.getElementById("save-settings-btn"),
+
+  placeModal: document.getElementById("place-modal"),
+  closePlaceModal: document.getElementById("close-place-modal"),
+  modalPlaceName: document.getElementById("modal-place-name"),
+  modalTags: document.getElementById("modal-tags"),
+  modalAddress: document.getElementById("modal-address"),
+  modalStatusText: document.getElementById("modal-status-text"),
+  modalSummarySection: document.getElementById("modal-summary-section"),
+  modalEditorialSummary: document.getElementById("modal-editorial-summary"),
+  modalPhoneLink: document.getElementById("modal-phone-link"),
+  modalWebsiteLink: document.getElementById("modal-website-link"),
+  modalRouteBtn: document.getElementById("modal-route-btn")
+};
+
+// ============================================================================
+// Initialization & Key Governance
+// ============================================================================
+document.addEventListener("DOMContentLoaded", async () => {
+  setupEventListeners();
+  await loadStoredSettings();
+
+  if (!state.apiKey) {
+    // Show settings quickstart dialog if no key found
+    DOM.settingsModal.showModal();
+  } else {
+    await initializeAppEngine();
+  }
+});
+
+async function loadStoredSettings() {
+  let defaultKey = "";
+  try {
+    const configModule = await import("./config.js");
+    if (configModule.config && configModule.config.GMP_API_KEY) {
+      defaultKey = configModule.config.GMP_API_KEY;
+    }
+  } catch (e) {
+    // config.js is not present (e.g. in git/production)
+  }
+
+  let savedKey = localStorage.getItem("GMP_API_KEY");
+  if (!savedKey) {
+    savedKey = defaultKey;
+    if (defaultKey) {
+      localStorage.setItem("GMP_API_KEY", defaultKey);
+    }
+  }
+  const savedMapId = localStorage.getItem("GMP_MAP_ID") || "DEMO_MAP_ID";
+  state.apiKey = savedKey;
+  state.mapId = savedMapId;
+  if (DOM.apiKeyInput) DOM.apiKeyInput.value = savedKey;
+  if (DOM.mapIdInput) DOM.mapIdInput.value = savedMapId;
+}
+
+async function initializeAppEngine() {
+  try {
+    DOM.feedStatus.textContent = "Loading Google Maps Engine...";
+    DOM.spinner.style.display = "inline-block";
+
+    // 1. Initialize modern loader with attribution & beta features for advanced interactions
+    state.loader = new Loader({
+      apiKey: state.apiKey,
+      version: "beta",
+      libraries: ["maps", "marker", "places", "routes", "core"],
+      internalUsageAttributionIds: ["gmp_git_agentskills_v1"]
+    });
+
+    // Load necessary library modules asynchronously
+    state.libraries.maps = await state.loader.importLibrary("maps");
+    state.libraries.marker = await state.loader.importLibrary("marker");
+    state.libraries.places = await state.loader.importLibrary("places");
+    state.libraries.routes = await state.loader.importLibrary("routes");
+    state.libraries.core = await state.loader.importLibrary("core");
+
+    // 2. Acquire User GPS Geolocation
+    await detectUserLocation();
+
+    // 3. Render Map Stage
+    renderMap();
+
+    // 4. Perform Initial Proximity Scan
+    await performNearbySearch();
+
+  } catch (error) {
+    console.error("Critical API Initialization Failure:", error);
+    DOM.feedStatus.textContent = "⚠️ Map initialization failed. Please check your API Key / Demo Key settings.";
+    DOM.spinner.style.display = "none";
+    DOM.settingsModal.showModal();
+  }
+}
+
+// ============================================================================
+// GPS Geolocation Scanner (Two-Stage Desktop Wi-Fi & Satellite Fallback)
+// ============================================================================
+async function detectUserLocation() {
+  DOM.coordsDisplay.textContent = "Scanning GPS satellite lock...";
+  
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      console.warn("Geolocation unsupported by this browser. Using urban fallback.");
+      applyLocation(DEFAULT_FALLBACK_LOCATION, "GPS Offline (Fallback City)");
+      resolve(state.userLocation);
+      return;
+    }
+
+    // Stage 1: Try High Accuracy (Satellite GPS) with short 5s timeout
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
+        applyLocation(coords, `${coords.lat.toFixed(3)}°N, ${coords.lng.toFixed(3)}°W`);
+        resolve(state.userLocation);
+      },
+      (error) => {
+        console.warn(`High-accuracy GPS timed out or failed (${error.message}). Retrying with standard Mac Wi-Fi positioning...`);
+        
+        // Stage 2: Try Low Accuracy (Wi-Fi IP/MAC Triangulation - works on almost all Macs!)
+        navigator.geolocation.getCurrentPosition(
+          (wifiPosition) => {
+            const wifiCoords = { lat: wifiPosition.coords.latitude, lng: wifiPosition.coords.longitude };
+            applyLocation(wifiCoords, `Wi-Fi Lock: ${wifiCoords.lat.toFixed(3)}°N, ${wifiCoords.lng.toFixed(3)}°W`);
+            resolve(state.userLocation);
+          },
+          (finalError) => {
+            console.warn(`Standard Wi-Fi location also denied/failed (${finalError.message}). Using fallback location.`);
+            applyLocation(DEFAULT_FALLBACK_LOCATION, "Demo Mode (San Francisco Fallback)");
+            resolve(state.userLocation);
+          },
+          { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 }
+        );
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+    );
+  });
+}
+
+function applyLocation(coords, label) {
+  state.userLocation = { lat: coords.lat, lng: coords.lng };
+  DOM.coordsDisplay.textContent = label;
+  if (state.map) {
+    state.map.setCenter(state.userLocation);
+    updateUserMarker();
+  }
+}
+
+let userMarkerInstance = null;
+function updateUserMarker() {
+  if (!state.map || !state.userLocation) return;
+  const { AdvancedMarkerElement } = state.libraries.marker;
+
+  if (userMarkerInstance) {
+    userMarkerInstance.position = state.userLocation;
+    return;
+  }
+
+  const userPinBadge = document.createElement("div");
+  userPinBadge.className = "marker-badge marker-user";
+  userPinBadge.innerHTML = `<span class="marker-icon">📍</span><div class="marker-pulse"></div>`;
+  userPinBadge.title = "Your Live Geolocation (Drag or Right-Click Map to Move)";
+
+  userMarkerInstance = new AdvancedMarkerElement({
+    map: state.map,
+    position: state.userLocation,
+    content: userPinBadge,
+    title: "Your Current Location",
+    zIndex: 1000,
+    gmpDraggable: true
+  });
+
+  userMarkerInstance.addEventListener("dragend", (e) => {
+    if (userMarkerInstance.position) {
+      const lat = typeof userMarkerInstance.position.lat === "function" ? userMarkerInstance.position.lat() : userMarkerInstance.position.lat;
+      const lng = typeof userMarkerInstance.position.lng === "function" ? userMarkerInstance.position.lng() : userMarkerInstance.position.lng;
+      applyLocation({ lat, lng }, `Custom Pin: ${lat.toFixed(3)}°, ${lng.toFixed(3)}°`);
+      performNearbySearch();
+    }
+  });
+}
+
+// ============================================================================
+// Google Map Stage & Advanced Marker Setup
+// ============================================================================
+function renderMap() {
+  const { Map } = state.libraries.maps;
+
+  // Ensure explicit height container to prevent CF2 map height collapse
+  state.map = new Map(DOM.mapContainer, {
+    center: state.userLocation,
+    zoom: 13,
+    mapId: state.mapId, // Mandatory for AdvancedMarkerElement (CF9)
+    disableDefaultUI: true,
+    zoomControl: true,
+    gestureHandling: "greedy"
+  });
+
+  // Render Draggable User Pulse Pin
+  updateUserMarker();
+
+  // Allow user to Right-Click anywhere on the map to set a new scan epicenter!
+  state.map.addListener("rightclick", (e) => {
+    if (e.latLng) {
+      const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+      applyLocation(coords, `Map Pin: ${coords.lat.toFixed(3)}°, ${coords.lng.toFixed(3)}°`);
+      performNearbySearch();
+    }
+  });
+}
+
+// ============================================================================
+// Places API (New) - Dynamic Nearby Scanner
+// ============================================================================
+async function performNearbySearch() {
+  if (!state.map || !state.userLocation) return;
+
+  const { Place } = state.libraries.places;
+  const category = state.currentCategory;
+  const meta = CATEGORY_META[category];
+
+  try {
+    DOM.feedStatus.textContent = `Scanning for nearby ${meta.label}...`;
+    DOM.spinner.style.display = "inline-block";
+    DOM.placesFeed.innerHTML = "";
+    clearPlaceMarkers();
+
+    // Strict Places API (New) searchNearby method (replaces deprecated PlacesService)
+    const request = {
+      fields: [
+        "displayName",
+        "formattedAddress",
+        "location",
+        "rating",
+        "userRatingCount",
+        "types",
+        "businessStatus",
+        "currentOpeningHours",
+        "internationalPhoneNumber",
+        "nationalPhoneNumber",
+        "websiteURI",
+        "editorialSummary",
+        "googleMapsURI",
+        "id"
+      ],
+      locationRestriction: {
+        center: state.userLocation,
+        radius: Number(state.searchRadius)
+      },
+      includedPrimaryTypes: [category]
+    };
+
+    const { places } = await Place.searchNearby(request);
+    state.placesList = places || [];
+
+    // Sort results by approximate flight distance from user location
+    state.placesList.sort((a, b) => {
+      const distA = getApproxDistance(state.userLocation, a.location);
+      const distB = getApproxDistance(state.userLocation, b.location);
+      return distA - distB;
+    });
+
+    updatePillCount(category, state.placesList.length);
+
+    if (state.placesList.length === 0) {
+      DOM.feedStatus.textContent = `No ${meta.label.toLowerCase()} found within ${state.searchRadius / 1000} km radius. Try extending radius!`;
+      DOM.spinner.style.display = "none";
+      return;
+    }
+
+    DOM.feedStatus.textContent = `Located ${state.placesList.length} critical facilities nearby`;
+    DOM.spinner.style.display = "none";
+
+    // Render cards and map pins
+    state.placesList.forEach((place, index) => {
+      renderPlaceCard(place, index);
+      renderPlaceMarker(place, index);
+    });
+
+    // Auto-fit map viewport if markers exist
+    fitMapToResults();
+
+  } catch (error) {
+    console.error("Places API Search error:", error);
+    DOM.feedStatus.textContent = `⚠️ Error searching places. Make sure Places API (New) is enabled on your key.`;
+    DOM.spinner.style.display = "none";
+  }
+}
+
+function renderPlaceCard(place, index) {
+  const meta = CATEGORY_META[state.currentCategory];
+  const distKm = (getApproxDistance(state.userLocation, place.location) / 1000).toFixed(1);
+  const isOpen = place.currentOpeningHours ? place.currentOpeningHours.openNow : null;
+  
+  let statusHTML = `<span class="badge-status">Status N/A</span>`;
+  if (isOpen === true) statusHTML = `<span class="badge-status badge-open">🟢 Open Now</span>`;
+  if (isOpen === false) statusHTML = `<span class="badge-status badge-closed">🔴 Closed</span>`;
+
+  const li = document.createElement("li");
+  li.className = "place-card";
+  li.setAttribute("data-type", state.currentCategory);
+  li.style.animation = `slideInCard 0.4s ease forwards`;
+  li.style.animationDelay = `${index * 0.06}s`;
+  const phoneNum = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
+
+  li.innerHTML = `
+    <div class="card-top">
+      <h3>${place.displayName || "Emergency Unit"}</h3>
+      ${statusHTML}
+    </div>
+    <div class="card-body">
+      <p class="card-address">📫 ${place.formattedAddress || "Address not available"}</p>
+    </div>
+    <div class="card-contact">
+      ${phoneNum ? `<a href="tel:${phoneNum}" class="contact-chip phone-chip" onclick="event.stopPropagation();" title="Call now">
+        <span>📞</span> ${phoneNum}
+      </a>` : ""}
+      ${place.websiteURI ? `<a href="${place.websiteURI}" target="_blank" rel="noopener noreferrer" class="contact-chip web-chip" onclick="event.stopPropagation();" title="Visit website">
+        <span>🌐</span> Website
+      </a>` : ""}
+    </div>
+    <div class="card-footer">
+      <div class="card-metrics">
+        <span class="dist-badge">📍 ${distKm} km away</span>
+        ${place.rating ? `<span class="rating-badge">⭐ ${place.rating} (${place.userRatingCount || 0})</span>` : ""}
+      </div>
+      <button class="btn btn-route" data-index="${index}" aria-label="Navigate to ${place.displayName}">
+        <span>⚡ Quick Route</span>
+      </button>
+    </div>
+  `;
+
+  // Click card to zoom and open details modal
+  li.addEventListener("click", (e) => {
+    if (e.target.closest(".btn-route")) {
+      e.stopPropagation();
+      calculateAndRenderRoute(place);
+      return;
+    }
+    openPlaceDetailsModal(place);
+  });
+
+  DOM.placesFeed.appendChild(li);
+}
+
+function renderPlaceMarker(place, index) {
+  const { AdvancedMarkerElement } = state.libraries.marker;
+  const meta = CATEGORY_META[state.currentCategory];
+
+  // Custom HTML DOM Element for Marker Badge (CF7 compliant - append DOM instead of plain content setter)
+  const badge = document.createElement("div");
+  badge.className = `marker-badge marker-${state.currentCategory}`;
+  badge.innerHTML = `<span class="marker-icon">${meta.icon}</span><div class="marker-pulse"></div>`;
+
+  const marker = new AdvancedMarkerElement({
+    map: state.map,
+    position: place.location,
+    title: place.displayName,
+    content: badge,
+    gmpClickable: true,
+    zIndex: 10 + index
+  });
+
+  // Support both beta 'gmp-click' and weekly 'click' fallback (CF7)
+  const clickHandler = () => {
+    openPlaceDetailsModal(place);
+    calculateAndRenderRoute(place);
+  };
+  marker.addEventListener("gmp-click", clickHandler);
+  marker.element.addEventListener("click", clickHandler);
+
+  state.placeMarkers.push(marker);
+}
+
+function clearPlaceMarkers() {
+  state.placeMarkers.forEach(marker => { marker.map = null; });
+  state.placeMarkers = [];
+  if (state.currentRoutePolyline) {
+    state.currentRoutePolyline.setMap(null);
+    state.currentRoutePolyline = null;
+  }
+  if (state.directionsRenderer) {
+    state.directionsRenderer.setMap(null);
+  }
+}
+
+function updatePillCount(category, count) {
+  const countSpan = document.getElementById(`count-${category}`);
+  if (countSpan) countSpan.textContent = count;
+}
+
+function fitMapToResults() {
+  if (state.placesList.length === 0 || !state.map) return;
+  const { LatLngBounds } = state.libraries.core;
+  const bounds = new LatLngBounds();
+  bounds.extend(state.userLocation);
+  state.placesList.forEach(p => bounds.extend(p.location));
+  state.map.fitBounds(bounds, { top: 70, right: 70, bottom: 70, left: 450 });
+}
+
+// ============================================================================
+// Shortest Route Navigation (DirectionsService + DirectionsRenderer)
+// Uses google.maps global namespace (available after Loader initializes SDK)
+// ============================================================================
+async function calculateAndRenderRoute(place) {
+  DOM.routeHud.classList.remove("hidden");
+  DOM.routeDuration.textContent = "Calculating...";
+  DOM.routeDistance.textContent = "-- km";
+  DOM.routeSummary.textContent = `Computing shortest driving route to ${place.displayName}...`;
+  
+  const turnStepsBox = document.getElementById("turn-steps-box");
+  const turnStepsList = document.getElementById("turn-steps-list");
+  if (turnStepsBox) turnStepsBox.style.display = "none";
+  if (turnStepsList) turnStepsList.innerHTML = "";
+
+  try {
+    // DirectionsService & DirectionsRenderer live on google.maps global (not importLibrary)
+    if (!state.directionsService) {
+      state.directionsService = new google.maps.DirectionsService();
+    }
+    if (!state.directionsRenderer) {
+      state.directionsRenderer = new google.maps.DirectionsRenderer({
+        map: state.map,
+        suppressMarkers: true, // Keep our custom glowing Advanced Markers
+        polylineOptions: {
+          strokeColor: "#00f2fe",
+          strokeOpacity: 0.92,
+          strokeWeight: 7
+        }
+      });
+    } else {
+      state.directionsRenderer.setMap(state.map);
+    }
+
+    // Clear any previous fallback polyline
+    if (state.currentRoutePolyline) {
+      state.currentRoutePolyline.setMap(null);
+      state.currentRoutePolyline = null;
+    }
+
+    const request = {
+      origin: state.userLocation,
+      destination: place.location,
+      travelMode: google.maps.TravelMode.DRIVING,
+      provideRouteAlternatives: false // We want the single shortest route
+    };
+
+    const response = await state.directionsService.route(request);
+    state.directionsRenderer.setDirections(response);
+
+    if (response && response.routes && response.routes.length > 0) {
+      const bestRoute = response.routes[0];
+      const leg = bestRoute.legs[0];
+      
+      DOM.routeDuration.textContent = leg.duration ? leg.duration.text : "N/A";
+      DOM.routeDistance.textContent = leg.distance ? leg.distance.text : "-- km";
+      DOM.routeSummary.textContent = `Shortest route via ${bestRoute.summary || "main road"}. ${leg.duration ? leg.duration.text : ""} drive.`;
+
+      // Build Google Maps navigation URL (opens turn-by-turn voice navigation)
+      const destLat = place.location.lat();
+      const destLng = place.location.lng();
+      const navUrl = `https://www.google.com/maps/dir/?api=1&origin=${state.userLocation.lat},${state.userLocation.lng}&destination=${destLat},${destLng}&travelmode=driving`;
+      DOM.navExternalBtn.setAttribute("href", navUrl);
+
+      // Populate Step-by-Step Turn Instructions
+      if (leg.steps && leg.steps.length > 0 && turnStepsBox && turnStepsList) {
+        turnStepsBox.style.display = "block";
+        turnStepsList.innerHTML = "";
+        leg.steps.forEach((step, i) => {
+          const li = document.createElement("li");
+          li.className = "turn-step";
+          const distText = step.distance ? step.distance.text : "";
+          li.innerHTML = `<span class="step-instruction">${step.instructions}</span>
+                          <span class="step-dist">${distText}</span>`;
+          turnStepsList.appendChild(li);
+        });
+      }
+
+      // Fit map to show the full route
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend(state.userLocation);
+      bounds.extend(place.location);
+      state.map.fitBounds(bounds, { top: 80, right: 420, bottom: 80, left: 80 });
+
+      // Store for in-app navigation
+      state.lastRouteResponse = response;
+      state.navDestination = place;
+
+      // SOS Hook: if SOS is active, send facility address to emergency contact
+      if (state.sosActive && state.sosPhoneNumber) {
+        const facMsg = `🏥 *NAVIGATING TO:* ${place.displayName}\n📫 ${place.formattedAddress || "Address N/A"}\n📍 ${leg.distance ? leg.distance.text : ""} away, ETA ${leg.duration ? leg.duration.text : "N/A"}`;
+        const encoded = encodeURIComponent(facMsg);
+        const cleanNum = state.sosPhoneNumber.replace(/[^\d+]/g, "");
+        window.open(`https://wa.me/${cleanNum}?text=${encoded}`, "_blank");
+      }
+    }
+  } catch (error) {
+    console.warn("DirectionsService error, using fallback:", error.message);
+    
+    // Fallback: draw straight-line vector + estimate
+    const { Polyline } = state.libraries.maps;
+    if (state.currentRoutePolyline) state.currentRoutePolyline.setMap(null);
+    state.currentRoutePolyline = new Polyline({
+      path: [state.userLocation, place.location],
+      geodesic: true,
+      strokeColor: "#ff3864",
+      strokeOpacity: 0.9,
+      strokeWeight: 5,
+      map: state.map
+    });
+
+    const distKm = (getApproxDistance(state.userLocation, place.location) / 1000).toFixed(1);
+    const approxMins = Math.round((distKm / 35) * 60) + 2;
+    DOM.routeDuration.textContent = `~${approxMins} min*`;
+    DOM.routeDistance.textContent = `${distKm} km`;
+    DOM.routeSummary.textContent = `Approximate route shown. Enable Directions API on your key for real road navigation.`;
+    
+    const destLat = place.location.lat();
+    const destLng = place.location.lng();
+    const fallbackNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
+    DOM.navExternalBtn.setAttribute("href", fallbackNavUrl);
+  }
+}
+
+// ============================================================================
+// Interactive Modals & Event Listeners
+// ============================================================================
+function openPlaceDetailsModal(place) {
+  state.selectedPlace = place;
+  const meta = CATEGORY_META[state.currentCategory];
+
+  DOM.modalPlaceName.textContent = place.displayName || "Emergency Facility";
+  DOM.modalAddress.textContent = place.formattedAddress || "Address not reported";
+  
+  // Tags
+  DOM.modalTags.innerHTML = `<span class="tag-chip" style="background: ${meta.color}">${meta.icon} ${meta.label}</span>`;
+  if (place.types) {
+    place.types.slice(0, 2).forEach(t => {
+      DOM.modalTags.innerHTML += `<span class="tag-chip">${t.replace("_", " ")}</span>`;
+    });
+  }
+
+  // Hours / Status
+  const isOpen = place.currentOpeningHours ? place.currentOpeningHours.openNow : null;
+  if (isOpen === true) DOM.modalStatusText.innerHTML = `<span class="badge-open">🟢 Open & Fully Operational</span>`;
+  else if (isOpen === false) DOM.modalStatusText.innerHTML = `<span class="badge-closed">🔴 Currently Closed</span>`;
+  else DOM.modalStatusText.textContent = "Operational hours not explicitly broadcasted";
+
+  // Editorial Summary
+  if (place.editorialSummary) {
+    DOM.modalSummarySection.classList.remove("hidden");
+    DOM.modalEditorialSummary.textContent = place.editorialSummary;
+  } else {
+    DOM.modalSummarySection.classList.add("hidden");
+  }
+
+  // Contact links
+  if (place.internationalPhoneNumber) {
+    DOM.modalPhoneLink.classList.remove("hidden");
+    DOM.modalPhoneLink.setAttribute("href", `tel:${place.internationalPhoneNumber}`);
+    DOM.modalPhoneLink.querySelector("span").textContent = `📞 Call ${place.internationalPhoneNumber}`;
+  } else {
+    DOM.modalPhoneLink.classList.add("hidden");
+  }
+
+  if (place.websiteURI || place.googleMapsURI) {
+    DOM.modalWebsiteLink.classList.remove("hidden");
+    DOM.modalWebsiteLink.setAttribute("href", place.websiteURI || place.googleMapsURI);
+  } else {
+    DOM.modalWebsiteLink.classList.add("hidden");
+  }
+
+  DOM.placeModal.showModal();
+}
+
+// ============================================================================
+// Health Quote Ticker — Rotates every 60 seconds
+// ============================================================================
+const HEALTH_QUOTES = [
+  "Invest in your body now, or pay interest on your health later.",
+  "Your health is your real net worth.",
+  "Abs are cool, but being able to breathe without wheezing up the stairs is cooler.",
+  "Flexing on Instagram is fine, but flexing painless joints at 50 is the real goal.",
+  "Sleep is not a luxury, it's a cheat code your body begs you to use.",
+  "Drink water like your skin's WiFi depends on it — because it does.",
+  "Your spine has carried you through every bad chair. Return the favor.",
+  "Skipping the doctor to Google your symptoms is not a personality trait.",
+  "Running on 3 hours of sleep isn't a flex, it's a cry for help.",
+  "Your future self is silently judging your screen time right now.",
+  "Eating veggies won't make you boring. Heart disease will.",
+  "Mental health isn't a trend, it's the OS your brain runs on.",
+  "A 10-minute walk beats a 10-hour Netflix binge for your serotonin.",
+  "Hydration check: if your pee is darker than your humor, drink water.",
+  "Stretching takes 5 minutes. A slipped disc takes 5 months. Choose wisely.",
+  "Your body is the only place you have to live in — maybe redecorate it with some exercise.",
+  "Health is the DLC you can't buy in-app. Grind for it IRL.",
+  "Being able to touch your toes at 60 is the ultimate flex.",
+  "Sunscreen today, compliments on your skin tomorrow.",
+  "The gym is just a side quest. The main quest is not dying early."
+];
+
+function setupHealthQuotes() {
+  const quoteText = document.getElementById("quote-text");
+  if (!quoteText) return;
+
+  let currentIndex = 0;
+
+  function rotateQuote() {
+    currentIndex = (currentIndex + 1) % HEALTH_QUOTES.length;
+    quoteText.style.opacity = "0";
+    quoteText.style.transform = "translateY(8px)";
+    setTimeout(() => {
+      quoteText.textContent = HEALTH_QUOTES[currentIndex];
+      quoteText.style.opacity = "1";
+      quoteText.style.transform = "translateY(0)";
+    }, 400);
+  }
+
+  // Randomize start
+  currentIndex = Math.floor(Math.random() * HEALTH_QUOTES.length);
+  quoteText.textContent = HEALTH_QUOTES[currentIndex];
+
+  setInterval(rotateQuote, 60000); // Every 60 seconds
+}
+
+function setupEventListeners() {
+  setupSOS();
+  setupNavigation();
+  setupHealthModal();
+  setupHealthQuotes();
+
+  // Category Switching Pills
+  DOM.pills.forEach(pill => {
+    pill.addEventListener("click", () => {
+      DOM.pills.forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      state.currentCategory = pill.dataset.category;
+      performNearbySearch();
+    });
+  });
+
+  // Radius selector
+  DOM.radiusSelect.addEventListener("change", (e) => {
+    state.searchRadius = parseInt(e.target.value);
+    performNearbySearch();
+  });
+
+  // GPS Rescan
+  DOM.rescanBtn.addEventListener("click", async () => {
+    await detectUserLocation();
+    performNearbySearch();
+  });
+
+  // Location Modal Triggers & Custom Address Search
+  if (DOM.openLocationModalBtn) {
+    DOM.openLocationModalBtn.addEventListener("click", () => {
+      DOM.locationErrorText.classList.add("hidden");
+      DOM.locationModal.showModal();
+    });
+  }
+  DOM.closeLocationModal.addEventListener("click", () => DOM.locationModal.close());
+  
+  DOM.retryGpsBtn.addEventListener("click", async () => {
+    DOM.locationModal.close();
+    await detectUserLocation();
+    performNearbySearch();
+  });
+
+  DOM.searchLocationBtn.addEventListener("click", async () => {
+    const query = DOM.customLocationInput.value.trim();
+    if (!query) return;
+
+    try {
+      DOM.searchLocationBtn.textContent = "Searching...";
+      DOM.locationErrorText.classList.add("hidden");
+      const { Place } = state.libraries.places;
+      
+      const { places } = await Place.searchByText({
+        textQuery: query,
+        fields: ["location", "displayName", "formattedAddress"]
+      });
+
+      if (places && places.length > 0) {
+        const found = places[0];
+        const newCoords = { lat: found.location.lat(), lng: found.location.lng() };
+        applyLocation(newCoords, `City: ${found.displayName || query}`);
+        DOM.locationModal.close();
+        DOM.customLocationInput.value = "";
+        performNearbySearch();
+      } else {
+        DOM.locationErrorText.textContent = "Could not find coordinates for this place name or address.";
+        DOM.locationErrorText.classList.remove("hidden");
+      }
+    } catch (err) {
+      console.error("Address text search failed:", err);
+      DOM.locationErrorText.textContent = "Error communicating with Places API. Check API permissions.";
+      DOM.locationErrorText.classList.remove("hidden");
+    } finally {
+      DOM.searchLocationBtn.textContent = "Scan Here";
+    }
+  });
+
+  // Allow press Enter in location input
+  DOM.customLocationInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") DOM.searchLocationBtn.click();
+  });
+
+  // Close HUD
+  DOM.closeHudBtn.addEventListener("click", () => {
+    DOM.routeHud.classList.add("hidden");
+    if (state.currentRoutePolyline) {
+      state.currentRoutePolyline.setMap(null);
+      state.currentRoutePolyline = null;
+    }
+  });
+
+  // Modal Triggers
+  DOM.openSettingsBtn.addEventListener("click", () => DOM.settingsModal.showModal());
+  DOM.closeSettingsModal.addEventListener("click", () => DOM.settingsModal.close());
+  DOM.closePlaceModal.addEventListener("click", () => DOM.placeModal.close());
+
+  DOM.modalRouteBtn.addEventListener("click", () => {
+    DOM.placeModal.close();
+    if (state.selectedPlace) {
+      calculateAndRenderRoute(state.selectedPlace);
+    }
+  });
+
+  // Save Settings & Reboot Map Engine
+  DOM.saveSettingsBtn.addEventListener("click", async () => {
+    const enteredKey = DOM.apiKeyInput.value.trim();
+    const enteredMapId = DOM.mapIdInput.value.trim() || "DEMO_MAP_ID";
+    
+    localStorage.setItem("GMP_API_KEY", enteredKey);
+    localStorage.setItem("GMP_MAP_ID", enteredMapId);
+    state.apiKey = enteredKey;
+    state.mapId = enteredMapId;
+    
+    DOM.settingsModal.close();
+    if (enteredKey) {
+      await initializeAppEngine();
+    } else {
+      alert("Please enter a valid Google Maps API Key or Demo Key to start scanning.");
+    }
+  });
+
+  // Close dialogs on outside click
+  window.addEventListener("click", (e) => {
+    if (e.target === DOM.settingsModal) DOM.settingsModal.close();
+    if (e.target === DOM.placeModal) DOM.placeModal.close();
+    if (e.target === DOM.locationModal) DOM.locationModal.close();
+    const profileModal = document.getElementById("profile-modal");
+    if (e.target === profileModal) profileModal.close();
+    const healthModal = document.getElementById("health-modal");
+    if (e.target === healthModal) healthModal.close();
+  });
+
+  // ====================================================================
+  // Medical Profile / My Account
+  // ====================================================================
+  const profileModal = document.getElementById("profile-modal");
+  const openProfileBtn = document.getElementById("open-profile-btn");
+  const closeProfileBtn = document.getElementById("close-profile-modal");
+  const saveProfileBtn = document.getElementById("save-profile-btn");
+  const copyProfileBtn = document.getElementById("copy-profile-btn");
+  const shareProfileBtn = document.getElementById("share-profile-btn");
+
+  // Profile field IDs
+  const PROFILE_FIELDS = [
+    "profile-name", "profile-age", "profile-blood",
+    "profile-height", "profile-weight", "profile-emergency-contact",
+    "profile-sos-message",
+    "profile-allergies", "profile-conditions", "profile-medications", "profile-notes"
+  ];
+
+  // Load saved profile on page load
+  function loadProfile() {
+    const saved = JSON.parse(localStorage.getItem("RESQNOW_PROFILE") || "{}");
+    PROFILE_FIELDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && saved[id] !== undefined) el.value = saved[id];
+    });
+  }
+  loadProfile();
+
+  // Open / Close
+  if (openProfileBtn) openProfileBtn.addEventListener("click", () => profileModal.showModal());
+  if (closeProfileBtn) closeProfileBtn.addEventListener("click", () => profileModal.close());
+
+  // Save
+  if (saveProfileBtn) saveProfileBtn.addEventListener("click", () => {
+    const data = {};
+    PROFILE_FIELDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) data[id] = el.value;
+    });
+    localStorage.setItem("RESQNOW_PROFILE", JSON.stringify(data));
+    saveProfileBtn.textContent = "✅ Saved!";
+    setTimeout(() => { saveProfileBtn.textContent = "💾 Save Profile"; }, 1500);
+  });
+
+  // Build formatted text from profile
+  function buildProfileText() {
+    const g = id => (document.getElementById(id)?.value || "").trim();
+    let text = "🩺 *RESQNOW — EMERGENCY MEDICAL PROFILE*\n";
+    text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+    if (g("profile-name")) text += `👤 *Name:* ${g("profile-name")}\n`;
+    if (g("profile-age")) text += `🎂 *Age:* ${g("profile-age")} years\n`;
+    if (g("profile-blood")) text += `🩸 *Blood Group:* ${g("profile-blood")}\n`;
+    if (g("profile-height")) text += `📏 *Height:* ${g("profile-height")} cm\n`;
+    if (g("profile-weight")) text += `⚖️ *Weight:* ${g("profile-weight")} kg\n`;
+    if (g("profile-emergency-contact")) text += `📞 *Emergency Contact:* ${g("profile-emergency-contact")}\n`;
+    text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+    if (g("profile-allergies")) text += `⚠️ *Allergies:* ${g("profile-allergies")}\n`;
+    if (g("profile-conditions")) text += `🩻 *Conditions:* ${g("profile-conditions")}\n`;
+    if (g("profile-medications")) text += `💊 *Medications:* ${g("profile-medications")}\n`;
+    if (g("profile-notes")) text += `📝 *Notes:* ${g("profile-notes")}\n`;
+    text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+    text += "📍 Sent from ResQNow Emergency App";
+    return text;
+  }
+
+  // Copy to Clipboard
+  if (copyProfileBtn) copyProfileBtn.addEventListener("click", async () => {
+    const text = buildProfileText();
+    try {
+      await navigator.clipboard.writeText(text);
+      copyProfileBtn.textContent = "✅ Copied!";
+      setTimeout(() => { copyProfileBtn.textContent = "📋 Copy Info"; }, 2000);
+    } catch (err) {
+      // Fallback for older browsers
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      copyProfileBtn.textContent = "✅ Copied!";
+      setTimeout(() => { copyProfileBtn.textContent = "📋 Copy Info"; }, 2000);
+    }
+  });
+
+  // Share via WhatsApp
+  if (shareProfileBtn) shareProfileBtn.addEventListener("click", () => {
+    const text = buildProfileText();
+    const encoded = encodeURIComponent(text);
+    window.open(`https://wa.me/?text=${encoded}`, "_blank");
+  });
+}
+
+// ============================================================================
+// My Health Logs & Reminders Engine
+// ============================================================================
+function setupHealthModal() {
+  const openHealthBtn = document.getElementById("open-health-btn");
+  const closeHealthBtn = document.getElementById("close-health-modal");
+  const healthModal = document.getElementById("health-modal");
+
+  if (!openHealthBtn || !healthModal) return;
+
+  // Open / Close
+  openHealthBtn.addEventListener("click", () => {
+    renderIllnessList();
+    renderPrescriptionList();
+    renderRemindersList();
+    healthModal.showModal();
+  });
+  if (closeHealthBtn) closeHealthBtn.addEventListener("click", () => healthModal.close());
+
+  // Tab Switching
+  const tabBtns = healthModal.querySelectorAll(".health-tab-btn");
+  const tabPanes = healthModal.querySelectorAll(".health-tab-pane");
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      tabBtns.forEach(b => b.classList.remove("active"));
+      tabPanes.forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      const targetId = `tab-${btn.dataset.tab}`;
+      const pane = document.getElementById(targetId);
+      if (pane) pane.classList.add("active");
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // 1. Illness Log Management
+  // --------------------------------------------------------------------------
+  const illnessForm = document.getElementById("add-illness-form");
+  const illnessList = document.getElementById("illness-history-list");
+
+  function getIllnesses() {
+    return JSON.parse(localStorage.getItem("RESQNOW_ILLNESSES") || "[]");
+  }
+  function saveIllnesses(data) {
+    localStorage.setItem("RESQNOW_ILLNESSES", JSON.stringify(data));
+  }
+
+  function renderIllnessList() {
+    const data = getIllnesses();
+    if (!illnessList) return;
+    if (data.length === 0) {
+      illnessList.innerHTML = `<li class="empty-health-card">No illness records logged yet. Add your first record above!</li>`;
+      return;
+    }
+    illnessList.innerHTML = data.map((item, idx) => `
+      <li class="health-item-card">
+        <div class="health-card-header">
+          <strong>🤒 ${escapeHtml(item.name)}</strong>
+          <span class="status-chip ${item.status === 'Recovered' ? 'status-green' : item.status === 'Ongoing' ? 'status-yellow' : 'status-red'}">${escapeHtml(item.status)}</span>
+        </div>
+        <div class="health-card-meta">
+          <span>📅 Date: <b>${escapeHtml(item.date)}</b></span>
+          ${item.doctor ? `<span>🩺 Doctor: <b>${escapeHtml(item.doctor)}</b></span>` : ''}
+        </div>
+        ${item.symptoms ? `<p class="health-card-desc"><b>Symptoms:</b> ${escapeHtml(item.symptoms)}</p>` : ''}
+        <div class="health-card-actions">
+          <button class="btn-delete-health" data-type="illness" data-index="${idx}">🗑️ Delete</button>
+        </div>
+      </li>
+    `).join("");
+
+    illnessList.querySelectorAll(".btn-delete-health").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const index = parseInt(e.target.dataset.index);
+        const list = getIllnesses();
+        list.splice(index, 1);
+        saveIllnesses(list);
+        renderIllnessList();
+      });
+    });
+  }
+
+  if (illnessForm) {
+    illnessForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("illness-name").value.trim();
+      const date = document.getElementById("illness-date").value;
+      const symptoms = document.getElementById("illness-symptoms").value.trim();
+      const status = document.getElementById("illness-status").value;
+      const doctor = document.getElementById("illness-doctor").value.trim();
+
+      if (!name || !date) return;
+
+      const list = getIllnesses();
+      list.unshift({ id: Date.now(), name, date, symptoms, status, doctor });
+      saveIllnesses(list);
+      illnessForm.reset();
+      renderIllnessList();
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // 2. Prescription Vault Management
+  // --------------------------------------------------------------------------
+  const rxForm = document.getElementById("add-prescription-form");
+  const rxList = document.getElementById("prescription-list");
+
+  function getPrescriptions() {
+    return JSON.parse(localStorage.getItem("RESQNOW_PRESCRIPTIONS") || "[]");
+  }
+  function savePrescriptions(data) {
+    localStorage.setItem("RESQNOW_PRESCRIPTIONS", JSON.stringify(data));
+  }
+
+  function renderPrescriptionList() {
+    const data = getPrescriptions();
+    if (!rxList) return;
+    if (data.length === 0) {
+      rxList.innerHTML = `<li class="empty-health-card">No prescription records uploaded yet.</li>`;
+      return;
+    }
+    rxList.innerHTML = data.map((item, idx) => `
+      <li class="health-item-card">
+        <div class="health-card-header">
+          <strong>📜 ${escapeHtml(item.title)}</strong>
+          <span class="date-chip">📅 ${escapeHtml(item.date)}</span>
+        </div>
+        ${item.medicines ? `<p class="health-card-desc"><b>Medications:</b> ${escapeHtml(item.medicines)}</p>` : ''}
+        ${item.fileData ? `
+          <div class="rx-preview-box">
+            ${item.fileType?.startsWith("image/") ? `<img src="${item.fileData}" alt="Prescription" class="rx-img-thumb">` : ''}
+            <a href="${item.fileData}" download="${escapeHtml(item.fileName || 'prescription')}" class="btn-rx-download" target="_blank">📄 View/Download ${escapeHtml(item.fileName || 'Document')}</a>
+          </div>
+        ` : ''}
+        <div class="health-card-actions">
+          <button class="btn-delete-health" data-type="prescription" data-index="${idx}">🗑️ Delete</button>
+        </div>
+      </li>
+    `).join("");
+
+    rxList.querySelectorAll(".btn-delete-health").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const index = parseInt(e.target.dataset.index);
+        const list = getPrescriptions();
+        list.splice(index, 1);
+        savePrescriptions(list);
+        renderPrescriptionList();
+      });
+    });
+  }
+
+  if (rxForm) {
+    rxForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const title = document.getElementById("rx-title").value.trim();
+      const date = document.getElementById("rx-date").value;
+      const medicines = document.getElementById("rx-medicines").value.trim();
+      const fileInput = document.getElementById("rx-file");
+
+      if (!title || !date) return;
+
+      const saveItem = (fileData = null, fileName = "", fileType = "") => {
+        const list = getPrescriptions();
+        list.unshift({ id: Date.now(), title, date, medicines, fileData, fileName, fileType });
+        savePrescriptions(list);
+        rxForm.reset();
+        renderPrescriptionList();
+      };
+
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          saveItem(evt.target.result, file.name, file.type);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        saveItem();
+      }
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // 3. Doctor Visit Reminders Management
+  // --------------------------------------------------------------------------
+  const remForm = document.getElementById("add-reminder-form");
+  const remList = document.getElementById("reminders-list");
+
+  function getReminders() {
+    return JSON.parse(localStorage.getItem("RESQNOW_REMINDERS") || "[]");
+  }
+  function saveReminders(data) {
+    localStorage.setItem("RESQNOW_REMINDERS", JSON.stringify(data));
+  }
+
+  function renderRemindersList() {
+    const data = getReminders();
+    if (!remList) return;
+    if (data.length === 0) {
+      remList.innerHTML = `<li class="empty-health-card">No upcoming doctor reminders set.</li>`;
+      return;
+    }
+    remList.innerHTML = data.map((item, idx) => `
+      <li class="health-item-card">
+        <div class="health-card-header">
+          <strong>🩺 ${escapeHtml(item.doctor)}</strong>
+          <span class="status-chip status-purple">🔄 ${escapeHtml(item.recurrence)}</span>
+        </div>
+        <div class="health-card-meta">
+          <span>⏰ Appointment: <b>${new Date(item.date).toLocaleString()}</b></span>
+        </div>
+        ${item.notes ? `<p class="health-card-desc"><b>Notes:</b> ${escapeHtml(item.notes)}</p>` : ''}
+        <div class="health-card-actions">
+          <button class="btn-delete-health" data-type="reminder" data-index="${idx}">🗑️ Delete</button>
+        </div>
+      </li>
+    `).join("");
+
+    remList.querySelectorAll(".btn-delete-health").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const index = parseInt(e.target.dataset.index);
+        const list = getReminders();
+        list.splice(index, 1);
+        saveReminders(list);
+        renderRemindersList();
+      });
+    });
+  }
+
+  if (remForm) {
+    remForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const doctor = document.getElementById("rem-doctor").value.trim();
+      const date = document.getElementById("rem-date").value;
+      const recurrence = document.getElementById("rem-recurrence").value;
+      const notes = document.getElementById("rem-notes").value.trim();
+
+      if (!doctor || !date) return;
+
+      const list = getReminders();
+      list.unshift({ id: Date.now(), doctor, date, recurrence, notes });
+      saveReminders(list);
+      remForm.reset();
+      renderRemindersList();
+
+      if ("Notification" in window && Notification.permission !== "granted") {
+        Notification.requestPermission();
+      }
+    });
+  }
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+  }
+}
+
+// Utility: Calculate quick spherical distance approximation in meters
+function getApproxDistance(loc1, loc2) {
+  const lat1 = loc1.lat;
+  const lng1 = loc1.lng;
+  const lat2 = typeof loc2.lat === "function" ? loc2.lat() : loc2.lat;
+  const lng2 = typeof loc2.lng === "function" ? loc2.lng() : loc2.lng;
+
+  const R = 6371000; // Earth radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// ============================================================================
+// SOS Emergency System
+// ============================================================================
+function setupSOS() {
+  const sosBtn = document.getElementById("sos-btn");
+  const sosModal = document.getElementById("sos-modal");
+  const sosPhone = document.getElementById("sos-phone");
+  const sosConfirm = document.getElementById("sos-confirm-btn");
+  const sosCancel = document.getElementById("sos-cancel-btn");
+  const sosModalCancel = document.getElementById("sos-modal-cancel");
+  const closeSosModal = document.getElementById("close-sos-modal");
+
+  if (!sosBtn || !sosModal) {
+    console.warn("SOS elements not found in DOM");
+    return;
+  }
+
+  // Pre-fill from profile emergency contact
+  function refreshSOSPhone() {
+    try {
+      const profile = JSON.parse(localStorage.getItem("RESQNOW_PROFILE") || "{}");
+      if (profile["profile-emergency-contact"] && sosPhone) {
+        sosPhone.value = profile["profile-emergency-contact"];
+      }
+    } catch(e) {}
+  }
+  refreshSOSPhone();
+
+  sosBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (state.sosActive) {
+      deactivateSOS();
+    } else {
+      refreshSOSPhone(); // Refresh phone number from profile each time
+      try {
+        if (!sosModal.open) sosModal.showModal();
+      } catch(err) {
+        console.warn("SOS modal error:", err);
+      }
+    }
+  });
+
+  if (closeSosModal) closeSosModal.addEventListener("click", () => sosModal.close());
+  if (sosModalCancel) sosModalCancel.addEventListener("click", () => sosModal.close());
+
+  if (sosConfirm) sosConfirm.addEventListener("click", () => {
+    const phone = sosPhone ? sosPhone.value.trim() : "";
+    if (!phone) { alert("Please enter a phone number."); return; }
+    state.sosPhoneNumber = phone;
+    sosModal.close();
+    activateSOS();
+  });
+
+  if (sosCancel) sosCancel.addEventListener("click", () => deactivateSOS());
+}
+
+function activateSOS() {
+  state.sosActive = true;
+  const sosBtn = document.getElementById("sos-btn");
+  const sosStatusBar = document.getElementById("sos-status-bar");
+  sosBtn.classList.add("sos-active");
+  sosStatusBar.classList.remove("hidden");
+
+  // Send initial location immediately
+  sendSOSLocation();
+
+  // Then send every 30 seconds
+  state.sosInterval = setInterval(sendSOSLocation, 30000);
+
+  // Start continuous GPS tracking
+  if (navigator.geolocation) {
+    state.sosWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      },
+      () => {},
+      { enableHighAccuracy: true }
+    );
+  }
+}
+
+function deactivateSOS() {
+  state.sosActive = false;
+  const sosBtn = document.getElementById("sos-btn");
+  const sosStatusBar = document.getElementById("sos-status-bar");
+  sosBtn.classList.remove("sos-active");
+  sosStatusBar.classList.add("hidden");
+
+  if (state.sosInterval) { clearInterval(state.sosInterval); state.sosInterval = null; }
+  if (state.sosWatchId) { navigator.geolocation.clearWatch(state.sosWatchId); state.sosWatchId = null; }
+}
+
+function sendSOSLocation() {
+  if (!state.userLocation) return;
+  const lat = state.userLocation.lat;
+  const lng = state.userLocation.lng;
+  const time = new Date().toLocaleTimeString();
+  const mapLink = `https://www.google.com/maps?q=${lat},${lng}`;
+  
+  const profile = JSON.parse(localStorage.getItem("RESQNOW_PROFILE") || "{}");
+  const customMessage = profile["profile-sos-message"] ? `${profile["profile-sos-message"]}\n\n` : "";
+  
+  let msg = `${customMessage}🆘 *RESQNOW SOS ALERT*\n⏰ ${time}\n📍 Live Location: ${mapLink}\n🔗 Lat: ${lat}, Lng: ${lng}`;
+
+  const cleanNum = state.sosPhoneNumber.replace(/[^\d+]/g, "");
+  const encoded = encodeURIComponent(msg);
+  const url = `https://wa.me/${cleanNum}?text=${encoded}`;
+  
+  // Use a temporary <a> element to avoid popup blockers
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ============================================================================
+// In-App Turn-by-Turn Navigation
+// ============================================================================
+function setupNavigation() {
+  const startNavBtn = document.getElementById("start-nav-btn");
+  const exitNavBtn = document.getElementById("exit-nav-btn");
+
+  startNavBtn.addEventListener("click", () => {
+    if (state.lastRouteResponse && state.navDestination) {
+      startInAppNavigation(state.lastRouteResponse, state.navDestination);
+    }
+  });
+
+  exitNavBtn.addEventListener("click", () => stopInAppNavigation());
+}
+
+function startInAppNavigation(response, place) {
+  const overlay = document.getElementById("nav-overlay");
+  overlay.classList.remove("hidden");
+  state.navActive = true;
+
+  const route = response.routes[0];
+  const leg = route.legs[0];
+  state.navSteps = leg.steps || [];
+  state.navCurrentStepIndex = 0;
+
+  // Set ETA and distance
+  document.getElementById("nav-eta-value").textContent = leg.duration ? leg.duration.text : "--";
+  document.getElementById("nav-remaining-value").textContent = leg.distance ? leg.distance.text : "--";
+
+  updateNavStep();
+
+  // Start GPS tracking for step advancement
+  if (navigator.geolocation) {
+    state.navWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        state.userLocation = userPos;
+        advanceNavStep(userPos);
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 2000 }
+    );
+  }
+}
+
+function updateNavStep() {
+  if (state.navCurrentStepIndex >= state.navSteps.length) {
+    document.getElementById("nav-instruction").innerHTML = "🎉 <strong>You have arrived!</strong>";
+    document.getElementById("nav-step-dist").textContent = "";
+    document.getElementById("nav-step-icon").textContent = "🏁";
+    document.getElementById("nav-next-text").textContent = "Destination reached";
+    return;
+  }
+
+  const step = state.navSteps[state.navCurrentStepIndex];
+  document.getElementById("nav-instruction").innerHTML = step.instructions || "Continue...";
+  document.getElementById("nav-step-dist").textContent = step.distance ? step.distance.text : "";
+
+  // Pick direction icon
+  const instr = (step.instructions || "").toLowerCase();
+  let icon = "➡️";
+  if (instr.includes("left")) icon = "⬅️";
+  else if (instr.includes("right")) icon = "➡️";
+  else if (instr.includes("u-turn")) icon = "↩️";
+  else if (instr.includes("roundabout")) icon = "🔄";
+  else if (instr.includes("merge")) icon = "↗️";
+  else if (instr.includes("straight") || instr.includes("continue")) icon = "⬆️";
+  document.getElementById("nav-step-icon").textContent = icon;
+
+  // Next step preview
+  if (state.navCurrentStepIndex + 1 < state.navSteps.length) {
+    const next = state.navSteps[state.navCurrentStepIndex + 1];
+    document.getElementById("nav-next-text").innerHTML = next.instructions || "Continue";
+  } else {
+    document.getElementById("nav-next-text").textContent = "Arrive at destination";
+  }
+}
+
+function advanceNavStep(userPos) {
+  if (state.navCurrentStepIndex >= state.navSteps.length) return;
+
+  const step = state.navSteps[state.navCurrentStepIndex];
+  if (!step.end_location) return;
+
+  const stepEnd = {
+    lat: typeof step.end_location.lat === "function" ? step.end_location.lat() : step.end_location.lat,
+    lng: typeof step.end_location.lng === "function" ? step.end_location.lng() : step.end_location.lng
+  };
+
+  const dist = getApproxDistance(userPos, stepEnd);
+  
+  // Advance to next step when within 40 meters of step endpoint
+  if (dist < 40) {
+    state.navCurrentStepIndex++;
+    updateNavStep();
+  }
+}
+
+function stopInAppNavigation() {
+  const overlay = document.getElementById("nav-overlay");
+  overlay.classList.add("hidden");
+  state.navActive = false;
+  state.navSteps = [];
+  state.navCurrentStepIndex = 0;
+
+  if (state.navWatchId) {
+    navigator.geolocation.clearWatch(state.navWatchId);
+    state.navWatchId = null;
+  }
+}
+
+// ============================================================================
+// Service Worker Registration & Offline Detection
+// ============================================================================
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").then((reg) => {
+    console.log("Service Worker registered:", reg.scope);
+  }).catch((err) => {
+    console.log("Service Worker registration skipped:", err.message);
+  });
+}
+
+window.addEventListener("online", () => {
+  document.getElementById("offline-banner")?.classList.add("hidden");
+});
+window.addEventListener("offline", () => {
+  document.getElementById("offline-banner")?.classList.remove("hidden");
+});
+
+// Initialize SOS & Nav on load removed, as it's now in setupEventListeners.
