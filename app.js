@@ -784,6 +784,7 @@ function setupEventListeners() {
   // Category Switching Pills with Sound & Icon Morphing (Click + Keyboard Enter/Space)
   DOM.pills.forEach(pill => {
     const handleCategoryActivate = () => {
+      soundManager.initAudioContext();
       const category = pill.dataset.category;
       
       // Play Category Sound & Trigger Icon Morph Animation

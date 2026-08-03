@@ -83,7 +83,7 @@ class SoundManager {
     this.stopAllSounds();
     const now = this.audioCtx.currentTime;
     const masterGain = this.audioCtx.createGain();
-    masterGain.gain.setValueAtTime(0.35, now); // Moderate 35% volume
+    masterGain.gain.setValueAtTime(0.65, now); // Clear, crisp volume level
     masterGain.connect(this.audioCtx.destination);
 
     const config = CATEGORY_CONFIG[category];
@@ -91,55 +91,53 @@ class SoundManager {
 
     try {
       switch (type) {
-        case "ambulance": { // Two-tone siren wail (0.7s)
+        case "ambulance": { // Clear Two-Tone Ambulance Siren (0.8s)
           const osc = this.audioCtx.createOscillator();
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(650, now);
-          osc.frequency.linearRampToValueAtTime(900, now + 0.35);
-          osc.frequency.linearRampToValueAtTime(650, now + 0.7);
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(750, now);
+          osc.frequency.setValueAtTime(950, now + 0.35);
+          osc.frequency.setValueAtTime(750, now + 0.6);
           
-          masterGain.gain.setValueAtTime(0.35, now);
-          masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+          masterGain.gain.setValueAtTime(0.65, now);
+          masterGain.gain.setValueAtTime(0.65, now + 0.7);
+          masterGain.gain.linearRampToValueAtTime(0.01, now + 0.8);
           
           osc.connect(masterGain);
           osc.start(now);
-          osc.stop(now + 0.75);
+          osc.stop(now + 0.8);
           this.activeOscillators.push(osc);
           break;
         }
-        case "police": { // Rapid police siren whoop (0.5s)
+        case "police": { // High-Pitch Police Siren Whoop (0.6s)
           const osc = this.audioCtx.createOscillator();
           osc.type = "sawtooth";
-          osc.frequency.setValueAtTime(450, now);
-          osc.frequency.exponentialRampToValueAtTime(1300, now + 0.45);
+          osc.frequency.setValueAtTime(500, now);
+          osc.frequency.exponentialRampToValueAtTime(1400, now + 0.5);
 
-          const filter = this.audioCtx.createBiquadFilter();
-          filter.type = "lowpass";
-          filter.frequency.value = 1800;
+          masterGain.gain.setValueAtTime(0.55, now);
+          masterGain.gain.setValueAtTime(0.55, now + 0.5);
+          masterGain.gain.linearRampToValueAtTime(0.01, now + 0.6);
 
-          masterGain.gain.setValueAtTime(0.3, now);
-          masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-
-          osc.connect(filter);
-          filter.connect(masterGain);
+          osc.connect(masterGain);
           osc.start(now);
-          osc.stop(now + 0.5);
+          osc.stop(now + 0.6);
           this.activeOscillators.push(osc);
           break;
         }
-        case "fire": { // Fire truck air horn siren (0.75s)
+        case "fire": { // Dual-Tone Fire Engine Horn (0.75s)
           const osc1 = this.audioCtx.createOscillator();
           const osc2 = this.audioCtx.createOscillator();
           osc1.type = "sawtooth";
-          osc2.type = "square";
+          osc2.type = "triangle";
           
-          osc1.frequency.setValueAtTime(380, now);
-          osc2.frequency.setValueAtTime(760, now);
-          osc1.frequency.linearRampToValueAtTime(520, now + 0.7);
-          osc2.frequency.linearRampToValueAtTime(1040, now + 0.7);
+          osc1.frequency.setValueAtTime(420, now);
+          osc2.frequency.setValueAtTime(840, now);
+          osc1.frequency.linearRampToValueAtTime(560, now + 0.65);
+          osc2.frequency.linearRampToValueAtTime(1120, now + 0.65);
 
-          masterGain.gain.setValueAtTime(0.28, now);
-          masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+          masterGain.gain.setValueAtTime(0.5, now);
+          masterGain.gain.setValueAtTime(0.5, now + 0.65);
+          masterGain.gain.linearRampToValueAtTime(0.01, now + 0.75);
 
           osc1.connect(masterGain);
           osc2.connect(masterGain);
@@ -150,56 +148,63 @@ class SoundManager {
           this.activeOscillators.push(osc1, osc2);
           break;
         }
-        case "pharmacy": { // Counter bell crystal chime (0.45s)
-          const osc = this.audioCtx.createOscillator();
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(1760, now); // A6 bell note
-          
-          masterGain.gain.setValueAtTime(0.38, now);
-          masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-          
-          osc.connect(masterGain);
-          osc.start(now);
-          osc.stop(now + 0.45);
-          this.activeOscillators.push(osc);
+        case "pharmacy": { // Bright Chemist Counter Bell Ring (0.5s)
+          const osc1 = this.audioCtx.createOscillator();
+          const osc2 = this.audioCtx.createOscillator();
+          osc1.type = "sine";
+          osc2.type = "sine";
+
+          osc1.frequency.setValueAtTime(1760, now); // A6
+          osc2.frequency.setValueAtTime(2637, now); // E7 harmonic
+
+          masterGain.gain.setValueAtTime(0.65, now);
+          masterGain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+          osc1.connect(masterGain);
+          osc2.connect(masterGain);
+          osc1.start(now);
+          osc2.start(now);
+          osc1.stop(now + 0.5);
+          osc2.stop(now + 0.5);
+          this.activeOscillators.push(osc1, osc2);
           break;
         }
-        case "vet": { // Cute cat meow pitch synth (0.5s)
+        case "vet": { // Playful Cat Meow Synth (0.55s)
           const osc = this.audioCtx.createOscillator();
           osc.type = "triangle";
-          osc.frequency.setValueAtTime(680, now);
-          osc.frequency.linearRampToValueAtTime(1150, now + 0.25);
+          osc.frequency.setValueAtTime(650, now);
+          osc.frequency.exponentialRampToValueAtTime(1250, now + 0.25);
           osc.frequency.linearRampToValueAtTime(550, now + 0.5);
 
-          masterGain.gain.setValueAtTime(0.32, now);
-          masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.52);
+          masterGain.gain.setValueAtTime(0.55, now);
+          masterGain.gain.linearRampToValueAtTime(0.01, now + 0.55);
 
           osc.connect(masterGain);
           osc.start(now);
-          osc.stop(now + 0.52);
+          osc.stop(now + 0.55);
           this.activeOscillators.push(osc);
           break;
         }
-        case "blood": { // Heartbeat ECG monitor double beep (0.4s)
+        case "blood": { // Crisp Heartbeat ECG Double Beep (0.45s)
           const osc1 = this.audioCtx.createOscillator();
           const osc2 = this.audioCtx.createOscillator();
           osc1.type = "sine";
           osc2.type = "sine";
           
-          osc1.frequency.setValueAtTime(950, now);
-          osc2.frequency.setValueAtTime(950, now + 0.18);
+          osc1.frequency.setValueAtTime(1050, now);
+          osc2.frequency.setValueAtTime(1050, now + 0.16);
 
-          masterGain.gain.setValueAtTime(0.35, now);
-          masterGain.gain.setValueAtTime(0.001, now + 0.12);
-          masterGain.gain.setValueAtTime(0.35, now + 0.18);
-          masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+          masterGain.gain.setValueAtTime(0.6, now);
+          masterGain.gain.setValueAtTime(0.01, now + 0.12);
+          masterGain.gain.setValueAtTime(0.6, now + 0.16);
+          masterGain.gain.exponentialRampToValueAtTime(0.01, now + 0.42);
 
           osc1.connect(masterGain);
           osc2.connect(masterGain);
           osc1.start(now);
           osc1.stop(now + 0.14);
-          osc2.start(now + 0.18);
-          osc2.stop(now + 0.4);
+          osc2.start(now + 0.16);
+          osc2.stop(now + 0.42);
           this.activeOscillators.push(osc1, osc2);
           break;
         }
