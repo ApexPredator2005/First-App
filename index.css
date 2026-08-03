@@ -457,7 +457,21 @@ body::after {
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-.pill-icon { font-size: 1.3rem; }
+.pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 1.3rem;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.pill-icon.icon-morphing {
+  opacity: 0.25;
+  transform: scale(1.22) rotate(8deg);
+}
 
 .pill-count {
   margin-left: 0.2rem;
@@ -467,6 +481,19 @@ body::after {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.btn-sound-toggle {
+  background: rgba(52, 211, 153, 0.12) !important;
+  border: 1px solid rgba(52, 211, 153, 0.3) !important;
+  color: var(--accent-emerald) !important;
+  font-size: 0.78rem !important;
+  padding: 0.3rem 0.7rem !important;
+}
+.btn-sound-toggle.muted {
+  background: rgba(251, 113, 133, 0.12) !important;
+  border: 1px solid rgba(251, 113, 133, 0.3) !important;
+  color: var(--accent-magenta) !important;
 }
 
 .pill-glow { display: none; }
