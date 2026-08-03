@@ -843,6 +843,21 @@ function setupEventListeners() {
   DOM.closeSettingsModal.addEventListener("click", () => DOM.settingsModal.close());
   DOM.closePlaceModal.addEventListener("click", () => DOM.placeModal.close());
 
+  // Toggle API Key Masking
+  const toggleKeyBtn = document.getElementById("toggle-key-visibility");
+  const keyToggleIcon = document.getElementById("key-toggle-icon");
+  if (toggleKeyBtn && DOM.apiKeyInput) {
+    toggleKeyBtn.addEventListener("click", () => {
+      if (DOM.apiKeyInput.type === "password") {
+        DOM.apiKeyInput.type = "text";
+        if (keyToggleIcon) keyToggleIcon.textContent = "🙈 Hide";
+      } else {
+        DOM.apiKeyInput.type = "password";
+        if (keyToggleIcon) keyToggleIcon.textContent = "👁️ Show";
+      }
+    });
+  }
+
   DOM.modalRouteBtn.addEventListener("click", () => {
     DOM.placeModal.close();
     if (state.selectedPlace) {

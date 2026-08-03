@@ -353,9 +353,14 @@
           </a>
         </div>
         <div class="form-group" style="margin-top: 1.5rem;">
-          <label for="api-key-input">Paste Your Google Maps API Key or Demo Key:</label>
-          <input type="text" id="api-key-input" placeholder="AIzaSy... or test-demo-key..." autocomplete="off" spellcheck="false">
-          <small>Required to unlock Places API (New) nearby searches & Routes API turn-by-turn vectors.</small>
+          <label for="api-key-input">Google Maps API Key (Masked & Protected):</label>
+          <div class="input-group">
+            <input type="password" id="api-key-input" placeholder="••••••••••••••••••••••••••••" autocomplete="off" spellcheck="false">
+            <button type="button" id="toggle-key-visibility" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; width: auto;" title="Toggle Visibility">
+              <span id="key-toggle-icon">👁️ Show</span>
+            </button>
+          </div>
+          <small>Key is masked for privacy. Server proxy and domain referrer restrictions protect your key automatically.</small>
         </div>
         <div class="form-group">
           <label for="map-id-input">Map ID (For 3D Vector Advanced Markers):</label>
