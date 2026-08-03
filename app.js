@@ -111,13 +111,30 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function loadStoredSettings() {
   let defaultKey = "";
+
+  // 1. Query Serverless API Proxy endpoint if available (Vercel/Netlify deployment)
   try {
-    const configModule = await import("./config.js");
-    if (configModule.config && configModule.config.GMP_API_KEY) {
-      defaultKey = configModule.config.GMP_API_KEY;
+    const res = await fetch("/api/config");
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.apiKey) {
+        defaultKey = data.apiKey;
+      }
     }
   } catch (e) {
-    // config.js is not present (e.g. in git/production)
+    // Proxy not present on static hosts
+  }
+
+  // 2. Import local config.js module if available (local development)
+  if (!defaultKey) {
+    try {
+      const configModule = await import("./config.js");
+      if (configModule.config && configModule.config.GMP_API_KEY) {
+        defaultKey = configModule.config.GMP_API_KEY;
+      }
+    } catch (e) {
+      // config.js is not present in version control
+    }
   }
 
   let savedKey = localStorage.getItem("GMP_API_KEY");
