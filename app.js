@@ -116,31 +116,7 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 async function loadStoredSettings() {
   let defaultKey = "";
 
-  // 1. Query Serverless API Proxy endpoint if available (Vercel/Netlify deployment)
-  try {
-    const res = await fetch("/api/config");
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.apiKey) {
-        defaultKey = data.apiKey;
-      }
-    }
-  } catch (e) {
-    // Proxy not present on static hosts
-  }
-
-  // 2. Import local config.js module if available (local development)
-  if (!defaultKey) {
-    try {
-      const configModule = await import("./config.js");
-      if (configModule.config && configModule.config.GMP_API_KEY) {
-        defaultKey = configModule.config.GMP_API_KEY;
-      }
-    } catch (e) {
-      // config.js is not present in version control
-    }
-  }
-
+  // Check localStorage for previously saved API key
   let savedKey = localStorage.getItem("GMP_API_KEY");
   if (!savedKey) {
     savedKey = defaultKey;
@@ -1057,6 +1033,9 @@ function setupHealthQuotes() {
   // Randomize start
   currentIndex = Math.floor(Math.random() * HEALTH_QUOTES.length);
   quoteText.textContent = HEALTH_QUOTES[currentIndex];
+
+  setInterval(rotateQuote, 60000); // Every 60 seconds
+}
 
 // Helper for ultra-smooth modal closing transition (Globally Accessible)
 function closeModalSmooth(modal) {

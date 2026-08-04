@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resqnow-v19';
+const CACHE_NAME = 'resqnow-v20';
 const APP_SHELL = [
   './',
   'index.html',
