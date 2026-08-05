@@ -96,15 +96,13 @@ const DOM = {
 
 // Initialization & Key Governance
 async function initApp() {
-  setupEventListeners();
+  // Wrap every listener setup in its own try/catch so one failure doesn't block others
+  try { setupEventListeners(); } catch(e) { console.error("setupEventListeners error:", e); }
+
   await loadStoredSettings();
 
-  if (!state.apiKey) {
-    // Show settings quickstart dialog if no key found
-    DOM.settingsModal.showModal();
-  } else {
-    await initializeAppEngine();
-  }
+  // ALWAYS initialize the emergency system — API key or not
+  await initializeAppEngine();
 }
 
 if (document.readyState === "complete" || document.readyState === "interactive") {
@@ -1053,10 +1051,10 @@ function closeModalSmooth(modal) {
 }
 
 function setupEventListeners() {
-  setupSOS();
-  setupNavigation();
-  setupHealthModal();
-  setupHealthQuotes();
+  try { setupSOS(); } catch(e) { console.warn("SOS setup error:", e); }
+  try { setupNavigation(); } catch(e) { console.warn("Navigation setup error:", e); }
+  try { setupHealthModal(); } catch(e) { console.warn("Health modal setup error:", e); }
+  try { setupHealthQuotes(); } catch(e) { console.warn("Health quotes setup error:", e); }
 
   // Category Switching Pills with smooth cross-fade (Click + Keyboard Enter/Space)
   DOM.pills.forEach(pill => {
