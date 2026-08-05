@@ -224,28 +224,61 @@ function formatCoordsLabel(lat, lng) {
   return `${latStr}, ${lngStr}`;
 }
 
+// Reverse geocode coords to a human-readable address (street, area, pincode)
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || !data.address) return null;
+    const a = data.address;
+    const parts = [];
+    // Street / road / neighbourhood
+    if (a.road) parts.push(a.road);
+    else if (a.neighbourhood) parts.push(a.neighbourhood);
+    // Area / suburb / village / city_district
+    if (a.suburb) parts.push(a.suburb);
+    else if (a.city_district) parts.push(a.city_district);
+    else if (a.village) parts.push(a.village);
+    // City
+    if (a.city) parts.push(a.city);
+    else if (a.town) parts.push(a.town);
+    else if (a.state_district) parts.push(a.state_district);
+    // Pincode
+    if (a.postcode) parts.push(a.postcode);
+    return parts.length > 0 ? parts.join(", ") : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 async function detectUserLocation() {
   DOM.coordsDisplay.textContent = "Scanning GPS satellite lock...";
   
   return new Promise((resolve) => {
-    let resolved = false;
+    const finishLocation = (coords, fallbackLabel) => {
+      applyLocation(coords, fallbackLabel);
+      resolve(coords);
+      // Now try to get a human-readable address asynchronously
+      reverseGeocode(coords.lat, coords.lng).then(address => {
+        if (address) {
+          DOM.coordsDisplay.textContent = address;
+        }
+      });
+    };
 
-    function finishLocation(coords, label) {
-      if (resolved) return;
-      resolved = true;
-      applyLocation(coords, label);
-      resolve(state.userLocation);
-    }
-
-    // Safety Timeout (4 seconds max) to guarantee initialization on Safari & mobile
+    // Safety timeout — forces app to proceed after 4 seconds even if GPS hangs
     const safetyTimeout = setTimeout(() => {
       console.warn("GPS lock timed out, engaging location fallback...");
-      finishLocation(state.userLocation || { lat: 25.623, lng: 85.091 }, "GPS Lock: 25.623°N, 85.091°E");
+      finishLocation(state.userLocation || { lat: 25.623, lng: 85.091 }, "Patna, Bihar 800001");
     }, 4000);
 
     if (!navigator.geolocation) {
       clearTimeout(safetyTimeout);
-      finishLocation({ lat: 25.623, lng: 85.091 }, "GPS Lock: 25.623°N, 85.091°E");
+      finishLocation({ lat: 25.623, lng: 85.091 }, "Patna, Bihar 800001");
       return;
     }
 
@@ -262,13 +295,13 @@ async function detectUserLocation() {
           (wifiPosition) => {
             clearTimeout(safetyTimeout);
             const wifiCoords = { lat: wifiPosition.coords.latitude, lng: wifiPosition.coords.longitude };
-            finishLocation(wifiCoords, `Wi-Fi Lock: ${formatCoordsLabel(wifiCoords.lat, wifiCoords.lng)}`);
+            finishLocation(wifiCoords, formatCoordsLabel(wifiCoords.lat, wifiCoords.lng));
           },
           (finalError) => {
             clearTimeout(safetyTimeout);
-            finishLocation({ lat: 25.623, lng: 85.091 }, "GPS Lock: 25.623°N, 85.091°E");
+            finishLocation({ lat: 25.623, lng: 85.091 }, "Patna, Bihar 800001");
           },
-          { enableHighAccuracy: false, timeout: 3000, maximumAge: 300000 }
+          { enableHighAccuracy: false, timeout: 3000, maximumAge: 120000 }
         );
       },
       { enableHighAccuracy: true, timeout: 3000, maximumAge: 60000 }
@@ -543,7 +576,7 @@ function getEmergencyFallbackPlaces(category, userLoc) {
 // Places API (New) - Dynamic Nearby Scanner with Emergency Fallback
 // ============================================================================
 async function performNearbySearch() {
-  if (!state.map || !state.userLocation) return;
+  if (!state.userLocation) return;
 
   const { Place } = state.libraries.places || {};
   const category = state.currentCategory;
