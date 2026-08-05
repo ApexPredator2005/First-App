@@ -839,8 +839,30 @@ body::after {
 
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 0.8rem; }
 .modal-header h2 { font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
-.btn-close { background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; }
-.btn-close:hover { color: var(--accent-magenta); }
+.btn-close {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 1.6rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.btn-close:hover {
+  color: #fff;
+  background: var(--accent-magenta);
+  border-color: var(--accent-magenta);
+  transform: scale(1.08);
+}
 
 .modal-body { color: var(--text-secondary); font-size: 0.9rem; }
 .quickstart-box { background: rgba(0, 122, 255, 0.05); border: 1px solid rgba(0, 122, 255, 0.15); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; }
