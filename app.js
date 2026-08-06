@@ -206,13 +206,51 @@ async function initializeAppEngine() {
 }
 
 function initializeAllPillCounts() {
-  Object.keys(CATEGORY_META).forEach(cat => {
+  Object.keys(CATEGORY_META).forEach(async (cat) => {
     const countSpan = document.getElementById(`count-${cat}`);
-    if (countSpan) {
-      const count = (cat === state.currentCategory) ? state.placesList.length : 20;
+    if (!countSpan) return;
+    if (cat === state.currentCategory) {
+      animateCountUp(countSpan, state.placesList.length);
+      return;
+    }
+    // For non-active categories, do a quick count via the same search pipeline
+    try {
+      const count = await getCountForCategory(cat);
       animateCountUp(countSpan, count);
+    } catch(e) {
+      animateCountUp(countSpan, 0);
     }
   });
+}
+
+async function getCountForCategory(category) {
+  if (!state.userLocation) return 0;
+  const { Place } = state.libraries.places || {};
+  
+  // Try Places API (New) first
+  if (Place && typeof Place.searchNearby === "function") {
+    try {
+      const request = {
+        fields: ["location", "displayName"],
+        locationRestriction: { center: state.userLocation, radius: Number(state.searchRadius) },
+        includedPrimaryTypes: [category]
+      };
+      const res = await Place.searchNearby(request);
+      if (res && res.places && res.places.length > 0) return res.places.length;
+    } catch(e) {}
+  }
+  
+  // Try Classic PlacesService
+  const classicResults = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius);
+  if (classicResults && classicResults.length > 0) return classicResults.length;
+  
+  // Fallback: count items within radius
+  const fallback = getEmergencyFallbackPlaces(category, state.userLocation);
+  const withinRadius = fallback.filter(p => {
+    const dist = getApproxDistance(state.userLocation, p.location);
+    return dist <= Number(state.searchRadius);
+  });
+  return withinRadius.length;
 }
 
 // ============================================================================
@@ -678,6 +716,27 @@ function searchWithClassicPlacesService(category, userLoc, radius) {
     places = getEmergencyFallbackPlaces(category, state.userLocation);
   }
 
+  // Filter ALL results by actual distance from user within selected radius
+  places = places.filter(p => {
+    const dist = getApproxDistance(state.userLocation, p.location);
+    return dist <= Number(state.searchRadius);
+  });
+
+  // For hospitals category: filter out pharmacies, medical stores, etc.
+  if (category === "hospital" && places.length > 0) {
+    places = places.filter(p => {
+      if (!p.types || p.types.length === 0) return true; // keep if no type info
+      const excludeTypes = ["pharmacy", "drugstore", "health", "physiotherapist", "dentist", "beauty_salon", "spa", "gym"];
+      const hasExcluded = p.types.some(t => excludeTypes.some(ex => t.toLowerCase().includes(ex)));
+      // Only exclude if it does NOT also have "hospital" in its types
+      if (hasExcluded) {
+        const hasHospital = p.types.some(t => t.toLowerCase().includes("hospital") || t.toLowerCase().includes("doctor"));
+        return hasHospital;
+      }
+      return true;
+    });
+  }
+
   state.placesList = places;
 
   // Sort results by distance from user location
@@ -688,6 +747,9 @@ function searchWithClassicPlacesService(category, userLoc, radius) {
   });
 
   updatePillCount(category, state.placesList.length);
+
+  // Update ALL other category pill counts too (so they reflect current radius)
+  initializeAllPillCounts();
 
   DOM.feedStatus.textContent = `Located ${state.placesList.length} active emergency units nearby`;
   DOM.spinner.style.display = "none";

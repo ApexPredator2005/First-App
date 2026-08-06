@@ -303,9 +303,9 @@ body::after {
 .status-badge button:hover { color: var(--accent-cyan); transform: rotate(180deg); }
 
 .btn-tiny {
-  background: rgba(244, 114, 182, 0.12) !important;
-  border: 1px solid rgba(244, 114, 182, 0.25) !important;
-  color: var(--accent-cyan) !important;
+  background: #007aff !important;
+  border: 1px solid #007aff !important;
+  color: #fff !important;
   font-size: 0.7rem !important;
   font-weight: 600 !important;
   padding: 0.25rem 0.6rem !important;
@@ -1036,8 +1036,8 @@ body::after {
 .profile-footer .btn { flex: 1; min-width: 120px; }
 
 .btn-tiny {
-  background: rgba(255,255,255,0.5) !important;
-  border: 1px solid rgba(255,255,255,0.6) !important;
+  background: #007aff !important;
+  border: 1px solid #005ec4 !important;
   color: #fff !important;
   font-size: 0.72rem !important;
   font-weight: 700 !important;
@@ -1047,8 +1047,8 @@ body::after {
   transition: all 0.2s !important;
 }
 .btn-tiny:hover {
-  background: rgba(255,255,255,0.8) !important;
-  color: var(--text-primary) !important;
+  background: #005ec4 !important;
+  color: #fff !important;
 }
 
 @keyframes sosBreath {
