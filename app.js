@@ -570,40 +570,29 @@ function getEmergencyFallbackPlaces(category, userLoc) {
     `City ${meta.label} 3`
   ];
 
-  const offsets = [
-    { dLat: 0.005, dLng: 0.004 },
-    { dLat: -0.008, dLng: 0.012 },
-    { dLat: 0.012, dLng: -0.009 },
-    { dLat: -0.004, dLng: -0.015 },
-    { dLat: 0.018, dLng: 0.007 },
-    { dLat: -0.015, dLng: -0.006 },
-    { dLat: 0.022, dLng: -0.014 },
-    { dLat: -0.020, dLng: 0.018 },
-    { dLat: 0.009, dLng: -0.022 },
-    { dLat: -0.011, dLng: 0.025 },
-    { dLat: 0.027, dLng: 0.012 },
-    { dLat: -0.025, dLng: -0.020 },
-    { dLat: 0.014, dLng: 0.030 },
-    { dLat: -0.029, dLng: 0.005 },
-    { dLat: 0.032, dLng: -0.018 },
-    { dLat: -0.018, dLng: -0.032 },
-    { dLat: 0.003, dLng: 0.035 },
-    { dLat: -0.034, dLng: 0.015 },
-    { dLat: 0.038, dLng: 0.002 },
-    { dLat: -0.002, dLng: -0.038 }
-  ];
+  // Scale offsets based on search radius (convert meters to approx degrees)
+  // 1 degree ≈ 111,000 meters, so radius/111000 gives max offset in degrees
+  const radiusM = Number(state.searchRadius) || 5000;
+  const maxDeg = (radiusM / 111000) * 0.85; // 85% of radius to keep within bounds
 
+  // Use category index as seed for unique positions per category
+  const catKeys = Object.keys(CATEGORY_META);
+  const catSeed = catKeys.indexOf(category) + 1;
+
+  // Generate evenly distributed points in a circle around user
   return selectedNames.map((name, i) => {
-    const off = offsets[i % offsets.length];
-    const itemLat = lat + off.dLat;
-    const itemLng = lng + off.dLng;
+    const angle = ((i * 137.508) + (catSeed * 60)) * (Math.PI / 180); // golden angle + category offset
+    const dist = maxDeg * (0.3 + 0.7 * ((i + catSeed) % selectedNames.length) / selectedNames.length);
+    const itemLat = lat + dist * Math.cos(angle);
+    const itemLng = lng + dist * Math.sin(angle);
     return {
       id: `fallback-${category}-${i}`,
       displayName: name,
-      formattedAddress: `Emergency Zone ${i + 1}, Main Arterial Road, Patna, Bihar`,
+      formattedAddress: `Zone ${i + 1}, ${meta.label} Area, Patna, Bihar`,
       location: { lat: itemLat, lng: itemLng },
-      rating: (4.3 + (i % 6) * 0.1).toFixed(1),
-      userRatingCount: 85 + i * 32,
+      rating: (4.0 + (i % 8) * 0.1).toFixed(1),
+      userRatingCount: 50 + i * 25,
+      types: [category],
       internationalPhoneNumber: "+91 612 2300100",
       nationalPhoneNumber: "0612 2300100",
       websiteURI: "https://emergencyservices.gov.in",
@@ -652,56 +641,69 @@ const OSM_CATEGORY_MAP = {
 
 async function searchWithOverpassAPI(category, userLoc, radius) {
   try {
-    const tags = OSM_CATEGORY_MAP[category];
-    if (!tags) return [];
+    const osmTags = OSM_CATEGORY_MAP[category];
+    if (!osmTags) return [];
 
     const lat = userLoc.lat;
     const lng = userLoc.lng;
     const r = Number(radius);
 
     // Build Overpass QL query
-    const tagQueries = tags.map(t => `${t}(around:${r},${lat},${lng});`).join("\n");
-    const query = `[out:json][timeout:10];(\n${tagQueries}\n);out center body;`;
+    const tagQueries = osmTags.map(t => `${t}(around:${r},${lat},${lng});`).join("");
+    const query = `[out:json][timeout:12];(${tagQueries});out center body;`;
 
-    const res = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "data=" + encodeURIComponent(query)
-    });
+    // Try multiple Overpass mirrors with GET (avoids CORS preflight blocking)
+    const mirrors = [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter"
+    ];
 
-    if (!res.ok) return [];
-    const data = await res.json();
+    let data = null;
+    for (const mirror of mirrors) {
+      try {
+        const url = `${mirror}?data=${encodeURIComponent(query)}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          data = await res.json();
+          if (data && data.elements && data.elements.length > 0) break;
+        }
+      } catch (mirrorErr) {
+        console.warn(`Overpass mirror ${mirror} failed:`, mirrorErr);
+      }
+    }
+
     if (!data || !data.elements || data.elements.length === 0) return [];
 
+    console.log(`Overpass API: found ${data.elements.length} ${category} results`);
     const meta = CATEGORY_META[category] || { label: "Emergency" };
 
     return data.elements.map((el, i) => {
       const elLat = el.lat || (el.center && el.center.lat) || lat;
       const elLng = el.lon || (el.center && el.center.lon) || lng;
-      const tags = el.tags || {};
-      const name = tags.name || tags["name:en"] || `${meta.label} #${i + 1}`;
+      const t = el.tags || {};
+      const name = t.name || t["name:en"] || `${meta.label} #${i + 1}`;
       const addr = [
-        tags["addr:housenumber"],
-        tags["addr:street"],
-        tags["addr:suburb"] || tags["addr:neighbourhood"],
-        tags["addr:city"] || tags["addr:town"],
-        tags["addr:state"],
-        tags["addr:postcode"]
+        t["addr:housenumber"],
+        t["addr:street"],
+        t["addr:suburb"] || t["addr:neighbourhood"],
+        t["addr:city"] || t["addr:town"],
+        t["addr:state"],
+        t["addr:postcode"]
       ].filter(Boolean).join(", ");
 
       return {
         id: `osm-${el.type}-${el.id}`,
         displayName: name,
-        formattedAddress: addr || `Near ${meta.label} zone, ${tags["addr:city"] || "Local Area"}`,
+        formattedAddress: addr || `Near ${name}, ${t["addr:city"] || "Local Area"}`,
         location: { lat: elLat, lng: elLng },
-        rating: tags.stars ? parseFloat(tags.stars) : null,
+        rating: t.stars ? parseFloat(t.stars) : null,
         userRatingCount: null,
         types: [category],
-        internationalPhoneNumber: tags.phone || tags["contact:phone"] || null,
-        nationalPhoneNumber: tags.phone || null,
-        websiteURI: tags.website || tags["contact:website"] || null,
+        internationalPhoneNumber: t.phone || t["contact:phone"] || null,
+        nationalPhoneNumber: t.phone || null,
+        websiteURI: t.website || t["contact:website"] || null,
         googleMapsURI: `https://maps.google.com/?q=${elLat},${elLng}`,
-        currentOpeningHours: tags.opening_hours ? { openNow: true } : null,
+        currentOpeningHours: t.opening_hours ? { openNow: true } : null,
         businessStatus: "OPERATIONAL"
       };
     });

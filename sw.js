@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resqnow-v25';
+const CACHE_NAME = 'resqnow-v26';
 const APP_SHELL = [
   './',
   'index.html',
@@ -55,6 +55,13 @@ self.addEventListener('message', (event) => {
 // Fetch event handler
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+
+  // Skip external API calls — let them go straight to network
+  if (url.hostname.includes('overpass-api.de') ||
+      url.hostname.includes('overpass.kumi.systems') ||
+      url.hostname.includes('nominatim.openstreetmap.org')) {
+    return; // Don't intercept, let browser handle directly
+  }
 
   // Check for Map tile requests
   const isMapTileRequest = url.hostname.includes('maps.googleapis.com') ||
