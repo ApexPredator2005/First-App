@@ -225,35 +225,48 @@ function initializeAllPillCounts() {
 
 async function getCountForCategory(category) {
   if (!state.userLocation) return 0;
-  const { Place } = state.libraries.places || {};
   
   // Try Places API (New) first
-  if (Place && typeof Place.searchNearby === "function") {
+  if (state.libraries.places && state.libraries.places.Place) {
     try {
+      const { Place } = state.libraries.places;
       const request = {
         fields: ["location", "displayName"],
         locationRestriction: { center: state.userLocation, radius: Number(state.searchRadius) },
         includedPrimaryTypes: [category]
       };
       const res = await Place.searchNearby(request);
-      if (res && res.places && res.places.length > 0) return res.places.length;
+      if (res && res.places && res.places.length > 0) {
+        const filtered = applyCategoryFilters(res.places, category).filter(p => {
+          const dist = getApproxDistance(state.userLocation, p.location);
+          return dist <= Number(state.searchRadius);
+        });
+        if (filtered.length > 0) return filtered.length;
+      }
     } catch(e) {}
   }
   
   // Try Classic PlacesService
   const classicResults = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius);
-  if (classicResults && classicResults.length > 0) return classicResults.length;
+  if (classicResults && classicResults.length > 0) {
+    const filtered = applyCategoryFilters(classicResults, category).filter(p => {
+      const dist = getApproxDistance(state.userLocation, p.location);
+      return dist <= Number(state.searchRadius);
+    });
+    if (filtered.length > 0) return filtered.length;
+  }
   
-  // Note: We skip Overpass API here for background counts to keep the app lightning fast.
-  // Overpass API is only queried for the actively selected category when rendering cards.
+  // Try Overpass API (Real OpenStreetMap data)
+  const osmResults = await searchWithOverpassAPI(category, state.userLocation, state.searchRadius);
+  if (osmResults && osmResults.length > 0) {
+    const filtered = applyCategoryFilters(osmResults, category).filter(p => {
+      const dist = getApproxDistance(state.userLocation, p.location);
+      return dist <= Number(state.searchRadius);
+    });
+    return filtered.length;
+  }
 
-  // Fallback: count items within radius
-  const fallback = getEmergencyFallbackPlaces(category, state.userLocation);
-  const withinRadius = fallback.filter(p => {
-    const dist = getApproxDistance(state.userLocation, p.location);
-    return dist <= Number(state.searchRadius);
-  });
-  return withinRadius.length;
+  return 0;
 }
 
 // ============================================================================
@@ -297,13 +310,12 @@ async function reverseGeocode(lat, lng) {
 }
 
 async function detectUserLocation() {
-  DOM.coordsDisplay.textContent = "Scanning GPS satellite lock...";
+  DOM.coordsDisplay.textContent = "Acquiring high-precision GPS location...";
   
   return new Promise((resolve) => {
     const finishLocation = (coords, fallbackLabel) => {
       applyLocation(coords, fallbackLabel);
       resolve(coords);
-      // Now try to get a human-readable address asynchronously
       reverseGeocode(coords.lat, coords.lng).then(address => {
         if (address) {
           DOM.coordsDisplay.textContent = address;
@@ -311,19 +323,17 @@ async function detectUserLocation() {
       });
     };
 
-    // Safety timeout — forces app to proceed after 4 seconds even if GPS hangs
     const safetyTimeout = setTimeout(() => {
-      console.warn("GPS lock timed out, engaging location fallback...");
-      finishLocation(state.userLocation || { lat: 25.623, lng: 85.091 }, "Patna, Bihar 800001");
-    }, 4000);
+      console.warn("GPS satellite lock timeout, using detected area coordinates...");
+      finishLocation(state.userLocation || { lat: 25.623, lng: 85.091 }, "Digha, Patna, 800024");
+    }, 8000);
 
     if (!navigator.geolocation) {
       clearTimeout(safetyTimeout);
-      finishLocation({ lat: 25.623, lng: 85.091 }, "Patna, Bihar 800001");
+      finishLocation({ lat: 25.623, lng: 85.091 }, "Digha, Patna, 800024");
       return;
     }
 
-    // Stage 1: Try High Accuracy (Satellite GPS) with short 3s timeout
     navigator.geolocation.getCurrentPosition(
       (position) => {
         clearTimeout(safetyTimeout);
@@ -331,7 +341,6 @@ async function detectUserLocation() {
         finishLocation(coords, formatCoordsLabel(coords.lat, coords.lng));
       },
       (error) => {
-        // Stage 2: Try Low Accuracy (Wi-Fi IP/MAC Triangulation)
         navigator.geolocation.getCurrentPosition(
           (wifiPosition) => {
             clearTimeout(safetyTimeout);
@@ -340,12 +349,12 @@ async function detectUserLocation() {
           },
           (finalError) => {
             clearTimeout(safetyTimeout);
-            finishLocation({ lat: 25.623, lng: 85.091 }, "Patna, Bihar 800001");
+            finishLocation({ lat: 25.623, lng: 85.091 }, "Digha, Patna, 800024");
           },
-          { enableHighAccuracy: false, timeout: 3000, maximumAge: 120000 }
+          { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
         );
       },
-      { enableHighAccuracy: true, timeout: 3000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   });
 }
@@ -422,184 +431,9 @@ function renderMap() {
   });
 }
 
-// Dynamic Emergency Facilities Generator (Fallback when API key restrictions prevent searchNearby)
+// Fallback generator disabled: 100% REAL verified data only!
 function getEmergencyFallbackPlaces(category, userLoc) {
-  const meta = CATEGORY_META[category] || { label: "Emergency Unit" };
-  const lat = userLoc ? userLoc.lat : 25.623;
-  const lng = userLoc ? userLoc.lng : 85.091;
-
-  const names = {
-    hospital: [
-      "AIIMS Emergency & Trauma Center",
-      "PMCH Central Emergency Hospital",
-      "IGIMS Super Specialty Hospital",
-      "Ruban Memorial Hospital & ICU",
-      "City Care Multi-Specialty Hospital",
-      "Kurji Holy Family Hospital",
-      "Nalanda Medical College & Hospital (NMCH)",
-      "Ford Hospital & Research Centre",
-      "Paras HMRI Hospital & Emergency",
-      "Mediversal Multi-Specialty Hospital",
-      "Apex Heart & Emergency Care",
-      "LifeLine Super Specialty ICU",
-      "Patna Trauma & Critical Care Center",
-      "St. Joseph Emergency Hospital",
-      "Metro Care Emergency Clinic",
-      "Global Health Multi-Specialty Hospital",
-      "Heritage Emergency & Critical Care",
-      "Red Cross Emergency Medical Center",
-      "Care & Cure Emergency Hospital",
-      "Universal Trauma & ICU Center"
-    ],
-    police: [
-      "District Police Control Room & HQ",
-      "Kankarbagh Police Station & Beat",
-      "Patna Junction Traffic & Emergency Post",
-      "Shastri Nagar Model Police Station",
-      "Kotwali Central Police Station",
-      "Gandhi Maidan Police Station",
-      "Rajeev Nagar Police Post",
-      "Phulwari Sharif Police Station",
-      "Danapur Cantonment Police Station",
-      "Patliputra Police Outpost",
-      "SK Puri Model Police Station",
-      "Gardanibagh Police Control Room",
-      "Bypass Highway Patrol Station",
-      "Airport Highway Security Outpost",
-      "Digha Ghat River Patrol Station",
-      "Agam Kuan Police Post",
-      "Budha Colony Police Station",
-      "Bahadurpur Police Beat",
-      "Secretariat High Security Police HQ",
-      "Women & Child Protection Cell HQ"
-    ],
-    fire_station: [
-      "Patna Main Fire Station & Headquarters",
-      "Kankarbagh Fire Sub-Station",
-      "Danapur Cantonment Fire Brigade",
-      "Phulwari Sharif Industrial Fire Response",
-      "Bypass Highway Emergency Fire Unit",
-      "Patliputra Industrial Area Fire Station",
-      "Airport Runway Fire & Safety Unit",
-      "Secretariat Zone Fire Station",
-      "Digha Industrial Fire Post",
-      "Gandhi Maidan Central Fire Brigade",
-      "Boring Road Emergency Fire Unit",
-      "Rajendra Nagar Fire Control Sub-Station",
-      "NMCH Hospital Zone Fire Unit",
-      "Anisabad Highway Fire Brigade",
-      "Bihta Emergency Fire Response Base",
-      "Khagaul Railway Fire Station",
-      "Kumhrar Heritage Zone Fire Unit",
-      "City Central Water Tender Base",
-      "Gardanibagh Fire Control Post",
-      "Riverfront Disaster Response Station"
-    ],
-    pharmacy: [
-      "Apollo Pharmacy 24x7 Emergency",
-      "Sanjeevani Medicos & Life Support",
-      "MedPlus 24-Hour Emergency Chemists",
-      "Apex Healthcare & Surgical Supplies",
-      "Wellness Forever Emergency Pharmacy",
-      "Frank Ross 24 Hour Chemist",
-      "Care Pharmacy & Surgical Store",
-      "LifeCare 24x7 Emergency Druggists",
-      "Patna Central Medical Hall",
-      "Relief 24-Hour Emergency Chemists",
-      "PMCH Campus Emergency Pharmacy",
-      "AIIMS Gate 24x7 Medicos",
-      "City Health Surgical & Pharmacy",
-      "Noble Chemists & Oxygen Depot",
-      "Gupta Emergency Medicos",
-      "Metro Care 24x7 Pharmacy",
-      "HealthFirst Emergency Druggists",
-      "Global Pharma & Surgical Depot",
-      "Red Cross Emergency Medicine Store",
-      "Universal 24 Hour Pharmacy"
-    ],
-    veterinary_care: [
-      "Government Veterinary Hospital & ICU",
-      "Paws & Claws Emergency Pet Clinic",
-      "PetCare Multi-Specialty Vet Clinic",
-      "City Animal Welfare & Emergency Care",
-      "Heal Pets 24x7 Trauma Hospital",
-      "Patna Pet Clinic & Surgical Unit",
-      "Animal Rescue & Emergency Shelter",
-      "Loyal Companions Vet Clinic",
-      "State Cattle & Small Animal Hospital",
-      "Happy Tails Pet Emergency Care",
-      "Dr. Dog & Cat Trauma Center",
-      "Vet Medicos & Animal Care Base",
-      "Urban Vet Specialty Clinic",
-      "Compassion Animal Rescue Base",
-      "Pet Paradise Emergency Clinic",
-      "VetSurge Animal Trauma Hospital",
-      "CareForPets 24x7 Vet Care",
-      "City Zoo & Wildlife Emergency Post",
-      "Blue Cross Animal Care Unit",
-      "Universal Pet Emergency Hospital"
-    ],
-    blood_bank: [
-      "Red Cross Society Central Blood Bank",
-      "AIIMS Blood Transfusion Center",
-      "LifeSaver Voluntary Blood Bank",
-      "Patna Rotary Blood Bank & Component Unit",
-      "Metro City Blood Bank 24x7",
-      "PMCH Regional Blood Transfusion Center",
-      "IGIMS Model Blood Bank",
-      "Prathama Blood Centre & Plasma Depot",
-      "Sanjeevani Blood Transfusion Unit",
-      "Lion's Club Emergency Blood Bank",
-      "Nalanda Emergency Blood Transfusion",
-      "Central Armed Forces Blood Depot",
-      "Apex Voluntary Blood Bank",
-      "City Care Plasma & Blood Center",
-      "LifeLine 24x7 Blood Bank",
-      "Heritage Blood Components Depot",
-      "Red Cross Emergency Plasma Unit",
-      "Humanity Blood Transfusion Center",
-      "Universal Voluntary Blood Bank",
-      "State Disaster Emergency Blood Storage"
-    ]
-  };
-
-  const selectedNames = names[category] || [
-    `Central ${meta.singular} 1`,
-    `Emergency ${meta.singular} 2`,
-    `City ${meta.singular} 3`
-  ];
-
-  // Scale offsets based on search radius (convert meters to approx degrees)
-  // 1 degree ≈ 111,000 meters, so radius/111000 gives max offset in degrees
-  const radiusM = Number(state.searchRadius) || 5000;
-  const maxDeg = (radiusM / 111000) * 0.85; // 85% of radius to keep within bounds
-
-  // Use category index as seed for unique positions per category
-  const catKeys = Object.keys(CATEGORY_META);
-  const catSeed = catKeys.indexOf(category) + 1;
-
-  // Generate evenly distributed points in a circle around user
-  return selectedNames.map((name, i) => {
-    const angle = ((i * 137.508) + (catSeed * 60)) * (Math.PI / 180); // golden angle + category offset
-    const dist = maxDeg * (0.3 + 0.7 * ((i + catSeed) % selectedNames.length) / selectedNames.length);
-    const itemLat = lat + dist * Math.cos(angle);
-    const itemLng = lng + dist * Math.sin(angle);
-    return {
-      id: `fallback-${category}-${i}`,
-      displayName: name,
-      formattedAddress: `Zone ${i + 1}, ${meta.singular} Sector, Patna, Bihar`,
-      location: { lat: itemLat, lng: itemLng },
-      rating: (4.0 + (i % 8) * 0.1).toFixed(1),
-      userRatingCount: 50 + i * 25,
-      types: [category],
-      internationalPhoneNumber: "+91 612 2300100",
-      nationalPhoneNumber: "0612 2300100",
-      websiteURI: "https://emergencyservices.gov.in",
-      googleMapsURI: `https://maps.google.com/?q=${itemLat},${itemLng}`,
-      currentOpeningHours: { openNow: true },
-      businessStatus: "OPERATIONAL"
-    };
-  });
+  return [];
 }
 
 
@@ -682,24 +516,19 @@ async function searchWithOverpassAPI(category, userLoc, radius) {
 
     if (!data || !data.elements || data.elements.length === 0) return [];
 
-    const meta = CATEGORY_META[category] || { label: "Emergency", singular: "Emergency Unit" };
-
     const results = data.elements.map((el) => {
       const elLat = el.lat || (el.center && el.center.lat);
       const elLng = el.lon || (el.center && el.center.lon);
       if (!elLat || !elLng) return null;
 
       const t = el.tags || {};
-      let name = t.name || t["name:en"] || t["name:hi"] || t.official_name || t.operator || t.brand;
+      const rawName = t.name || t["name:en"] || t["name:hi"] || t.official_name || t.operator || t.brand;
 
-      if (!name || name.trim() === "") {
-        const loc = t["addr:street"] || t["addr:suburb"] || t["addr:neighbourhood"] || t["addr:city"];
-        if (loc) {
-          name = `${loc} ${meta.singular}`;
-        } else {
-          name = `Patna ${meta.singular}`;
-        }
+      // STRICT RULE: DISCARD nameless elements or synthetic names!
+      if (!rawName || typeof rawName !== "string" || rawName.trim() === "" || rawName.includes("#")) {
+        return null;
       }
+      const name = rawName.trim();
 
       const addrParts = [
         t["addr:housenumber"],
@@ -838,7 +667,7 @@ function applyCategoryFilters(places, category) {
 let activeSearchId = 0;
 
 // ============================================================================
-// Places API (New) - Dynamic Nearby Scanner with Emergency Fallback
+// Places API (New) - Dynamic Nearby Scanner
 // ============================================================================
 async function performNearbySearch() {
   if (!state.userLocation) return;
@@ -886,7 +715,7 @@ async function performNearbySearch() {
         places = res.places;
       }
     } catch (e) {
-      console.warn("Places API (New) searchNearby failed, engaging fallback:", e);
+      console.warn("Places API (New) searchNearby failed:", e);
     }
   }
 
@@ -895,28 +724,28 @@ async function performNearbySearch() {
     places = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius);
   }
 
-  // Strategy 3: OpenStreetMap Overpass API (free, real data)
+  // Strategy 3: OpenStreetMap Overpass API (real data only)
   if (!places || places.length === 0) {
     places = await searchWithOverpassAPI(category, state.userLocation, state.searchRadius);
   }
 
-  // Filter by actual radius
+  // Filter ONLY places with REAL non-empty names and EXACT distance <= searchRadius
   places = (places || []).filter(p => {
+    let placeName = "";
+    if (typeof p.displayName === "string") placeName = p.displayName;
+    else if (p.displayName && p.displayName.text) placeName = p.displayName.text;
+    else if (p.name) placeName = p.name;
+
+    if (!placeName || typeof placeName !== "string" || placeName.trim() === "" || placeName.includes("#")) {
+      return false;
+    }
+
     const dist = getApproxDistance(state.userLocation, p.location);
     return dist <= Number(state.searchRadius);
   });
 
-  // Apply strict category filter
+  // Apply strict category type filter
   places = applyCategoryFilters(places, category);
-
-  // Strategy 4: Dynamic Location-Aware Emergency Fallback (last resort)
-  if (!places || places.length === 0) {
-    places = getEmergencyFallbackPlaces(category, state.userLocation);
-    places = places.filter(p => {
-      const dist = getApproxDistance(state.userLocation, p.location);
-      return dist <= Number(state.searchRadius);
-    });
-  }
 
   // Abort if another search started while fetching
   if (searchId !== activeSearchId || state.currentCategory !== category) {
@@ -933,9 +762,23 @@ async function performNearbySearch() {
   });
 
   updatePillCount(category, state.placesList.length);
-
-  DOM.feedStatus.textContent = `Located ${state.placesList.length} active ${meta.label.toLowerCase()} nearby`;
   DOM.spinner.style.display = "none";
+
+  if (state.placesList.length === 0) {
+    const radiusKm = Number(state.searchRadius) / 1000;
+    DOM.feedStatus.textContent = `0 verified ${meta.label.toLowerCase()} found within ${radiusKm} km`;
+    DOM.placesFeed.innerHTML = `
+      <div class="empty-state animate-in" style="padding: 2.5rem 1rem; text-align: center; color: #8e8e93;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
+        <h4 style="color: #fff; margin-bottom: 0.25rem;">No Verified ${meta.label} Found</h4>
+        <p style="font-size: 0.88rem; max-width: 320px; margin: 0 auto;">No real ${meta.label.toLowerCase()} with verified names found within ${radiusKm} km of your detected location.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.75rem; color: #007aff; font-weight: 500;">Try selecting a larger search radius (5 km, 10 km, 15 km).</p>
+      </div>
+    `;
+    return;
+  }
+
+  DOM.feedStatus.textContent = `Located ${state.placesList.length} verified ${meta.label.toLowerCase()} nearby`;
 
   // Render cards and map pins
   state.placesList.forEach((place, index) => {
