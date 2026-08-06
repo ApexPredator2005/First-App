@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resqnow-v26';
+const CACHE_NAME = 'resqnow-v27';
 const APP_SHELL = [
   './',
   'index.html',
@@ -59,7 +59,8 @@ self.addEventListener('fetch', (event) => {
   // Skip external API calls — let them go straight to network
   if (url.hostname.includes('overpass-api.de') ||
       url.hostname.includes('overpass.kumi.systems') ||
-      url.hostname.includes('nominatim.openstreetmap.org')) {
+      url.hostname.includes('nominatim.openstreetmap.org') ||
+      url.hostname.includes('router.project-osrm.org')) {
     return; // Don't intercept, let browser handle directly
   }
 

@@ -1105,29 +1105,69 @@ async function calculateAndRenderRoute(place) {
       }
     }
   } catch (error) {
-    console.warn("DirectionsService error, using fallback:", error.message);
+    console.warn("DirectionsService error, using OSRM fallback:", error.message);
     
-    // Fallback: draw straight-line vector + estimate
+    // Handle both Google LatLng and plain objects
+    const destLat = typeof place.location.lat === 'function' ? place.location.lat() : place.location.lat;
+    const destLng = typeof place.location.lng === 'function' ? place.location.lng() : place.location.lng;
+    const srcLat = typeof state.userLocation.lat === 'function' ? state.userLocation.lat() : state.userLocation.lat;
+    const srcLng = typeof state.userLocation.lng === 'function' ? state.userLocation.lng() : state.userLocation.lng;
+
     const { Polyline } = state.libraries.maps;
     if (state.currentRoutePolyline) state.currentRoutePolyline.setMap(null);
-    state.currentRoutePolyline = new Polyline({
-      path: [state.userLocation, place.location],
-      geodesic: true,
-      strokeColor: "#ff3864",
-      strokeOpacity: 0.9,
-      strokeWeight: 5,
-      map: state.map
-    });
 
-    const distKm = (getApproxDistance(state.userLocation, place.location) / 1000).toFixed(1);
-    const approxMins = Math.round((distKm / 35) * 60) + 2;
-    DOM.routeDuration.textContent = `~${approxMins} min*`;
-    DOM.routeDistance.textContent = `${distKm} km`;
-    DOM.routeSummary.textContent = `Approximate route shown. Enable Directions API on your key for real road navigation.`;
+    try {
+      // Try OSRM free routing API
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${srcLng},${srcLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+      const osrmRes = await fetch(osrmUrl);
+      const osrmData = await osrmRes.json();
+      
+      if (osrmData && osrmData.routes && osrmData.routes.length > 0) {
+        const route = osrmData.routes[0];
+        const path = route.geometry.coordinates.map(coord => ({ lat: coord[1], lng: coord[0] }));
+        
+        state.currentRoutePolyline = new Polyline({
+          path: path,
+          geodesic: true,
+          strokeColor: "#00f2fe",
+          strokeOpacity: 0.92,
+          strokeWeight: 7,
+          map: state.map
+        });
+
+        // Fit map to show the full route
+        const bounds = new google.maps.LatLngBounds();
+        path.forEach(p => bounds.extend(p));
+        state.map.fitBounds(bounds, { top: 80, right: 420, bottom: 80, left: 80 });
+
+        const distKm = (route.distance / 1000).toFixed(1);
+        const approxMins = Math.round(route.duration / 60);
+        DOM.routeDuration.textContent = `~${approxMins} min`;
+        DOM.routeDistance.textContent = `${distKm} km`;
+        DOM.routeSummary.textContent = `Route shown using OpenStreetMap routing.`;
+      } else {
+        throw new Error("No OSRM route found");
+      }
+    } catch (osrmError) {
+      console.warn("OSRM failed, using straight line fallback:", osrmError);
+      // Fallback: draw straight-line vector + estimate
+      state.currentRoutePolyline = new Polyline({
+        path: [{lat: srcLat, lng: srcLng}, {lat: destLat, lng: destLng}],
+        geodesic: true,
+        strokeColor: "#ff3864",
+        strokeOpacity: 0.9,
+        strokeWeight: 5,
+        map: state.map
+      });
+
+      const distKm = (getApproxDistance(state.userLocation, {lat: destLat, lng: destLng}) / 1000).toFixed(1);
+      const approxMins = Math.round((distKm / 35) * 60) + 2;
+      DOM.routeDuration.textContent = `~${approxMins} min*`;
+      DOM.routeDistance.textContent = `${distKm} km`;
+      DOM.routeSummary.textContent = `Approximate route shown. Enable Directions API on your key for real road navigation.`;
+    }
     
-    const destLat = place.location.lat();
-    const destLng = place.location.lng();
-    const fallbackNavUrl = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
+    const fallbackNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${srcLat},${srcLng}&destination=${destLat},${destLng}&travelmode=driving`;
     DOM.navExternalBtn.setAttribute("href", fallbackNavUrl);
   }
 }
