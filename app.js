@@ -244,9 +244,8 @@ async function getCountForCategory(category) {
   const classicResults = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius);
   if (classicResults && classicResults.length > 0) return classicResults.length;
   
-  // Try Overpass API (real OSM data)
-  const osmResults = await searchWithOverpassAPI(category, state.userLocation, state.searchRadius);
-  if (osmResults && osmResults.length > 0) return osmResults.length;
+  // Note: We skip Overpass API here for background counts to keep the app lightning fast.
+  // Overpass API is only queried for the actively selected category when rendering cards.
 
   // Fallback: count items within radius
   const fallback = getEmergencyFallbackPlaces(category, state.userLocation);
@@ -609,33 +608,30 @@ function getEmergencyFallbackPlaces(category, userLoc) {
 // ============================================================================
 const OSM_CATEGORY_MAP = {
   hospital: [
-    'node["amenity"="hospital"]',
-    'way["amenity"="hospital"]',
-    'node["amenity"="clinic"]',
-    'way["amenity"="clinic"]',
-    'node["amenity"="doctors"]'
+    'node["amenity"="hospital"]["name"]',
+    'way["amenity"="hospital"]["name"]'
   ],
   police: [
-    'node["amenity"="police"]',
-    'way["amenity"="police"]'
+    'node["amenity"="police"]["name"]',
+    'way["amenity"="police"]["name"]'
   ],
   fire_station: [
-    'node["amenity"="fire_station"]',
-    'way["amenity"="fire_station"]'
+    'node["amenity"="fire_station"]["name"]',
+    'way["amenity"="fire_station"]["name"]'
   ],
   pharmacy: [
-    'node["amenity"="pharmacy"]',
-    'way["amenity"="pharmacy"]'
+    'node["amenity"="pharmacy"]["name"]',
+    'way["amenity"="pharmacy"]["name"]'
   ],
   veterinary_care: [
-    'node["amenity"="veterinary"]',
-    'way["amenity"="veterinary"]'
+    'node["amenity"="veterinary"]["name"]',
+    'way["amenity"="veterinary"]["name"]'
   ],
   blood_bank: [
-    'node["healthcare"="blood_donation"]',
-    'way["healthcare"="blood_donation"]',
-    'node["healthcare"="blood_bank"]',
-    'way["healthcare"="blood_bank"]'
+    'node["healthcare"="blood_donation"]["name"]',
+    'way["healthcare"="blood_donation"]["name"]',
+    'node["healthcare"="blood_bank"]["name"]',
+    'way["healthcare"="blood_bank"]["name"]'
   ]
 };
 
@@ -841,6 +837,11 @@ function searchWithClassicPlacesService(category, userLoc, radius) {
       }
       return true;
     });
+  }
+
+  // Abort if the user switched categories while we were fetching
+  if (state.currentCategory !== category) {
+    return;
   }
 
   state.placesList = places;
