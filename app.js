@@ -244,6 +244,10 @@ async function getCountForCategory(category) {
   const classicResults = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius);
   if (classicResults && classicResults.length > 0) return classicResults.length;
   
+  // Try Overpass API (real OSM data)
+  const osmResults = await searchWithOverpassAPI(category, state.userLocation, state.searchRadius);
+  if (osmResults && osmResults.length > 0) return osmResults.length;
+
   // Fallback: count items within radius
   const fallback = getEmergencyFallbackPlaces(category, state.userLocation);
   const withinRadius = fallback.filter(p => {
@@ -610,6 +614,103 @@ function getEmergencyFallbackPlaces(category, userLoc) {
   });
 }
 
+
+// ============================================================================
+// OpenStreetMap Overpass API — Real Facility Data (Free, No API Key)
+// ============================================================================
+const OSM_CATEGORY_MAP = {
+  hospital: [
+    'node["amenity"="hospital"]',
+    'way["amenity"="hospital"]',
+    'node["amenity"="clinic"]',
+    'way["amenity"="clinic"]',
+    'node["amenity"="doctors"]'
+  ],
+  police: [
+    'node["amenity"="police"]',
+    'way["amenity"="police"]'
+  ],
+  fire_station: [
+    'node["amenity"="fire_station"]',
+    'way["amenity"="fire_station"]'
+  ],
+  pharmacy: [
+    'node["amenity"="pharmacy"]',
+    'way["amenity"="pharmacy"]'
+  ],
+  veterinary_care: [
+    'node["amenity"="veterinary"]',
+    'way["amenity"="veterinary"]'
+  ],
+  blood_bank: [
+    'node["healthcare"="blood_donation"]',
+    'way["healthcare"="blood_donation"]',
+    'node["healthcare"="blood_bank"]',
+    'way["healthcare"="blood_bank"]'
+  ]
+};
+
+async function searchWithOverpassAPI(category, userLoc, radius) {
+  try {
+    const tags = OSM_CATEGORY_MAP[category];
+    if (!tags) return [];
+
+    const lat = userLoc.lat;
+    const lng = userLoc.lng;
+    const r = Number(radius);
+
+    // Build Overpass QL query
+    const tagQueries = tags.map(t => `${t}(around:${r},${lat},${lng});`).join("\n");
+    const query = `[out:json][timeout:10];(\n${tagQueries}\n);out center body;`;
+
+    const res = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "data=" + encodeURIComponent(query)
+    });
+
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data || !data.elements || data.elements.length === 0) return [];
+
+    const meta = CATEGORY_META[category] || { label: "Emergency" };
+
+    return data.elements.map((el, i) => {
+      const elLat = el.lat || (el.center && el.center.lat) || lat;
+      const elLng = el.lon || (el.center && el.center.lon) || lng;
+      const tags = el.tags || {};
+      const name = tags.name || tags["name:en"] || `${meta.label} #${i + 1}`;
+      const addr = [
+        tags["addr:housenumber"],
+        tags["addr:street"],
+        tags["addr:suburb"] || tags["addr:neighbourhood"],
+        tags["addr:city"] || tags["addr:town"],
+        tags["addr:state"],
+        tags["addr:postcode"]
+      ].filter(Boolean).join(", ");
+
+      return {
+        id: `osm-${el.type}-${el.id}`,
+        displayName: name,
+        formattedAddress: addr || `Near ${meta.label} zone, ${tags["addr:city"] || "Local Area"}`,
+        location: { lat: elLat, lng: elLng },
+        rating: tags.stars ? parseFloat(tags.stars) : null,
+        userRatingCount: null,
+        types: [category],
+        internationalPhoneNumber: tags.phone || tags["contact:phone"] || null,
+        nationalPhoneNumber: tags.phone || null,
+        websiteURI: tags.website || tags["contact:website"] || null,
+        googleMapsURI: `https://maps.google.com/?q=${elLat},${elLng}`,
+        currentOpeningHours: tags.opening_hours ? { openNow: true } : null,
+        businessStatus: "OPERATIONAL"
+      };
+    });
+  } catch (e) {
+    console.warn("Overpass API search error:", e);
+    return [];
+  }
+}
+
 // ============================================================================
 // Places API (New) - Dynamic Nearby Scanner with Emergency Fallback
 // ============================================================================
@@ -711,24 +812,27 @@ function searchWithClassicPlacesService(category, userLoc, radius) {
     places = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius);
   }
 
-  // Strategy 3: Dynamic Location-Aware Emergency Fallback
+  // Strategy 3: OpenStreetMap Overpass API (free, no key, real data)
   if (!places || places.length === 0) {
-    places = getEmergencyFallbackPlaces(category, state.userLocation);
+    places = await searchWithOverpassAPI(category, state.userLocation, state.searchRadius);
   }
 
-  // Filter ALL results by actual distance from user within selected radius
-  places = places.filter(p => {
-    const dist = getApproxDistance(state.userLocation, p.location);
-    return dist <= Number(state.searchRadius);
-  });
+  // Strategy 4: Dynamic Location-Aware Emergency Fallback (last resort)
+  if (!places || places.length === 0) {
+    places = getEmergencyFallbackPlaces(category, state.userLocation);
+    // Filter fallback by radius
+    places = places.filter(p => {
+      const dist = getApproxDistance(state.userLocation, p.location);
+      return dist <= Number(state.searchRadius);
+    });
+  }
 
   // For hospitals category: filter out pharmacies, medical stores, etc.
   if (category === "hospital" && places.length > 0) {
     places = places.filter(p => {
-      if (!p.types || p.types.length === 0) return true; // keep if no type info
+      if (!p.types || p.types.length === 0) return true;
       const excludeTypes = ["pharmacy", "drugstore", "health", "physiotherapist", "dentist", "beauty_salon", "spa", "gym"];
       const hasExcluded = p.types.some(t => excludeTypes.some(ex => t.toLowerCase().includes(ex)));
-      // Only exclude if it does NOT also have "hospital" in its types
       if (hasExcluded) {
         const hasHospital = p.types.some(t => t.toLowerCase().includes("hospital") || t.toLowerCase().includes("doctor"));
         return hasHospital;
