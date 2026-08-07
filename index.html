@@ -305,7 +305,14 @@
         <button id="close-place-modal" class="btn-close" aria-label="Close modal">&times;</button>
       </header>
       <div class="modal-body" id="modal-place-details">
-        <!-- populated dynamically via JS -->
+        <div class="modal-tags" id="modal-tags"></div>
+        <p class="modal-address" id="modal-address"></p>
+        <div class="status-indicator" id="modal-status-text"></div>
+        <div id="modal-summary-section">
+          <p id="modal-editorial-summary"></p>
+        </div>
+        <a id="modal-phone-link" href="#" target="_blank"><span>📞 Call</span></a>
+        <a id="modal-website-link" href="#" target="_blank"><span>🌐 Visit Website</span></a>
       </div>
       <footer class="modal-footer">
         <button id="modal-route-btn" class="btn btn-primary">
@@ -588,6 +595,25 @@
 
   
   
+  
+  <!-- Hidden elements to prevent app.js from crashing -->
+  <div id="coordinates-display" class="hidden"></div>
+  <button id="rescan-btn" class="hidden"></button>
+  <button id="open-location-modal-btn" class="hidden"></button>
+  <button id="nav-external-btn" class="hidden"></button>
+  
+  <div id="turn-steps-box" class="hidden"></div>
+  <div id="turn-steps-list" class="hidden"></div>
+  <div id="quote-text" class="hidden"></div>
+  
+  <button id="sos-btn" class="hidden"></button>
+  <button id="sos-cancel-btn" class="hidden"></button>
+  <div id="sos-status-bar" class="hidden"></div>
+  
+  <button id="start-nav-btn" class="hidden"></button>
+  <button id="exit-nav-btn" class="hidden"></button>
+  <div id="nav-overlay" class="hidden"></div>
+  <div id="offline-banner" class="hidden"></div>
   
 </body>
 </html>
