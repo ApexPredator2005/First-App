@@ -61,6 +61,44 @@
           <h2>Emergency Squadrons</h2>
           <p>Select a category to find active emergency units near you</p>
         </div>
+        <nav class="category-pills" aria-label="Emergency category selectors">
+          <button class="pill pill-hospital active" data-category="hospital" aria-label="Show nearby hospitals">
+            <span class="pill-icon">🏥</span>
+            <span class="pill-label">Hospitals</span>
+            <span class="pill-count" id="count-hospital">0</span>
+            <div class="pill-glow"></div>
+          </button>
+          <button class="pill pill-police" data-category="police" aria-label="Show nearby police stations">
+            <span class="pill-icon">🚓</span>
+            <span class="pill-label">Police</span>
+            <span class="pill-count" id="count-police">0</span>
+            <div class="pill-glow"></div>
+          </button>
+          <button class="pill pill-fire" data-category="fire_station" aria-label="Show nearby fire stations">
+            <span class="pill-icon">🚒</span>
+            <span class="pill-label">Fire Stations</span>
+            <span class="pill-count" id="count-fire_station">0</span>
+            <div class="pill-glow"></div>
+          </button>
+          <button class="pill pill-pharmacy" data-category="pharmacy" aria-label="Show nearby pharmacies">
+            <span class="pill-icon">💊</span>
+            <span class="pill-label">Pharmacies</span>
+            <span class="pill-count" id="count-pharmacy">0</span>
+            <div class="pill-glow"></div>
+          </button>
+          <button class="pill pill-vet" data-category="veterinary_care" aria-label="Show nearby veterinary clinics">
+            <span class="pill-icon">🐾</span>
+            <span class="pill-label">Vet Clinics</span>
+            <span class="pill-count" id="count-veterinary_care">0</span>
+            <div class="pill-glow"></div>
+          </button>
+          <button class="pill pill-blood" data-category="blood_bank" aria-label="Show nearby blood banks">
+            <span class="pill-icon">🩸</span>
+            <span class="pill-label">Blood Banks</span>
+            <span class="pill-count" id="count-blood_bank">0</span>
+            <div class="pill-glow"></div>
+          </button>
+        </nav>
 
         <!-- Vibrant Interactive Category Pills -->
         
@@ -130,46 +168,7 @@
         <!-- Live Traffic Turn-by-Turn HUD (Appears when route is active) -->
         
         <!-- Floating Category Pills Over Map -->
-        <div class="map-floating-pills" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5; width: 90%; max-width: 700px;">
-          <nav class="category-pills" aria-label="Emergency category selectors">
-          <button class="pill pill-hospital active" data-category="hospital" aria-label="Show nearby hospitals">
-            <span class="pill-icon">🏥</span>
-            <span class="pill-label">Hospitals</span>
-            <span class="pill-count" id="count-hospital">0</span>
-            <div class="pill-glow"></div>
-          </button>
-          <button class="pill pill-police" data-category="police" aria-label="Show nearby police stations">
-            <span class="pill-icon">🚓</span>
-            <span class="pill-label">Police</span>
-            <span class="pill-count" id="count-police">0</span>
-            <div class="pill-glow"></div>
-          </button>
-          <button class="pill pill-fire" data-category="fire_station" aria-label="Show nearby fire stations">
-            <span class="pill-icon">🚒</span>
-            <span class="pill-label">Fire Stations</span>
-            <span class="pill-count" id="count-fire_station">0</span>
-            <div class="pill-glow"></div>
-          </button>
-          <button class="pill pill-pharmacy" data-category="pharmacy" aria-label="Show nearby pharmacies">
-            <span class="pill-icon">💊</span>
-            <span class="pill-label">Pharmacies</span>
-            <span class="pill-count" id="count-pharmacy">0</span>
-            <div class="pill-glow"></div>
-          </button>
-          <button class="pill pill-vet" data-category="veterinary_care" aria-label="Show nearby veterinary clinics">
-            <span class="pill-icon">🐾</span>
-            <span class="pill-label">Vet Clinics</span>
-            <span class="pill-count" id="count-veterinary_care">0</span>
-            <div class="pill-glow"></div>
-          </button>
-          <button class="pill pill-blood" data-category="blood_bank" aria-label="Show nearby blood banks">
-            <span class="pill-icon">🩸</span>
-            <span class="pill-label">Blood Banks</span>
-            <span class="pill-count" id="count-blood_bank">0</span>
-            <div class="pill-glow"></div>
-          </button>
-        </nav>
-        </div>
+        
         
         <div id="route-hud" class="route-hud glass-floating hidden" aria-live="polite">
           <header class="hud-header">

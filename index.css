@@ -121,11 +121,12 @@ body::after {
 .app-container {
   position: relative;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  grid-template-rows: auto 1fr;
   height: 100vh;
-  padding: 0.75rem;
-  gap: 0.75rem;
+  padding: 1.5rem;
+  gap: 1rem;
   max-width: 1920px;
   margin: 0 auto;
 }
@@ -177,15 +178,13 @@ body::after {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.85rem 1.4rem;
-  flex-shrink: 0;
-  border-radius: var(--radius-lg);
-  gap: 1rem;
-  background: var(--bg-glass);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0.5px 0 rgba(255, 255, 255, 0.12);
+  padding: 0 0 1rem 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  grid-column: 1;
+  grid-row: 1;
+}
 }
 
 .logo-group {
@@ -407,15 +406,13 @@ body::after {
    Main Workspace Matrix (Sidebar Left, Map Right)
    ========================================================================== */
 .main-workspace {
-  display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 1rem;
-  flex: 1;
-  min-height: 0;
+  display: contents; /* Let children join the parent grid */
 }
 
 .map-stage {
-  order: 1; /* Map on left */
+  grid-column: 2;
+  grid-row: 1 / 3;
+
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.5);
@@ -434,7 +431,9 @@ body::after {
 }
 
 .sidebar-panel {
-  order: 2; /* Sidebar on right */
+  grid-column: 1;
+  grid-row: 2;
+
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -472,38 +471,47 @@ body::after {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+
 .pill {
   position: relative;
-  background: var(--bg-glass-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-pill);
-  padding: 0.55rem 1rem;
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--text-secondary);
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 0.92rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-
-.pill-icon { font-size: 1.3rem; }
-
-.pill-count {
-  margin-left: 0.2rem;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 0.15rem 0.5rem;
-  border-radius: var(--radius-pill);
-  font-size: 0.78rem;
-  font-weight: 700;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
   color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  min-height: 85px;
 }
-
-.pill-glow { display: none; }
-
+.pill .pill-icon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1.2rem;
+}
+.pill .pill-label {
+  margin-bottom: 0.5rem;
+  z-index: 1;
+}
+.pill .pill-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  z-index: 1;
+}
+/* Colorful backgrounds for pills like the reference image */
+.pill-hospital { background: var(--grad-hospital); color: white; border: none; box-shadow: var(--glow-hospital); }
+.pill-police { background: var(--grad-police); color: white; border: none; box-shadow: var(--glow-police); }
+.pill-fire { background: var(--grad-fire); color: white; border: none; box-shadow: var(--glow-fire); }
+.pill-pharmacy { background: var(--grad-pharmacy); color: white; border: none; box-shadow: var(--glow-pharmacy); }
+.pill-vet { background: var(--grad-vet); color: white; border: none; box-shadow: var(--glow-vet); }
+.pill-blood { background: var(--grad-blood); color: white; border: none; box-shadow: var(--glow-blood); }
 .pill:hover {
   transform: translateY(-1px);
   background: #252930;
@@ -666,12 +674,11 @@ body::after {
 .sidebar-footer { padding: 0.5rem 1rem; border-top: 1px solid rgba(255,255,255,0.06); }
 
 .emergency-banner {
-  background: var(--bg-glass-card);
-  border: 1px solid rgba(251, 113, 133, 0.3);
-  padding: 0.65rem 0.8rem;
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 16px rgba(251, 113, 133, 0.12);
-  animation: sosBorderGlow 3s ease-in-out infinite alternate;
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  animation: none;
 }
 
 @keyframes sosBorderGlow {
