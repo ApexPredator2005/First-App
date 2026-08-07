@@ -46,7 +46,7 @@
   <div class="pastel-glow"></div>
 
   <!-- Desktop Wrapper (only applies on md+ screens) -->
-  <div class="md:flex md:gap-4 md:h-[85vh] md:max-w-[1200px] md:w-[95vw] md:mx-auto glass-container rounded-[2.5rem] overflow-hidden p-6">
+  <div class="md:flex md:gap-6 md:h-[85vh] md:max-w-[1300px] md:w-[95vw] md:mx-auto glass-container rounded-[2.5rem] overflow-hidden p-8">
   
     <!-- Left Column (Controls & Feed) -->
     <div class="md:w-[55%] shrink-0 flex flex-col md:h-full md:overflow-y-auto custom-scroll space-y-6 pr-2">
@@ -106,6 +106,22 @@
           <div id="spinner" class="spinner ml-2 hidden"></div>
         </section>
 
+        
+        <!-- Search Radius -->
+        <section class="flex items-center gap-2 mb-6">
+          <div class="glass-card px-4 py-2 rounded-full text-sm font-semibold text-gray-600 flex items-center gap-2 bg-white/80 shadow-sm border-white/60">
+            Search Radius: 
+            <select id="radius-select" class="bg-transparent border-none outline-none text-blue-600 font-bold cursor-pointer">
+              <option value="2000">2 km</option>
+              <option value="5000" selected>5 km</option>
+              <option value="10000">10 km</option>
+              <option value="15000">15 km</option>
+            </select>
+          </div>
+          <span id="feed-status" class="text-xs text-gray-400 font-medium ml-2">Awaiting radar...</span>
+          <div id="spinner" class="spinner ml-2 hidden"></div>
+        </section>
+    
         <!-- Emergency Squadrons Grid -->
         <section>
           <h2 class="text-xl font-bold mb-4">Emergency Squadrons</h2>
@@ -197,23 +213,7 @@
           </ul>
         </section>
       
-        <section class="mt-8 mb-4">
-          <h2 class="text-xl font-bold mb-4">Emergency Helplines (India)</h2>
-          <div class="space-y-2">
-             <div class="glass-card p-3 rounded-2xl flex justify-between items-center font-bold text-gray-700 bg-white/40">
-                <span>Police</span>
-                <a href="tel:100" class="text-blue-600 hover:underline">100</a>
-             </div>
-             <div class="glass-card p-3 rounded-2xl flex justify-between items-center font-bold text-gray-700 bg-white/40">
-                <span>Fire Dept</span>
-                <a href="tel:101" class="text-red-600 hover:underline">101</a>
-             </div>
-             <div class="glass-card p-3 rounded-2xl flex justify-between items-center font-bold text-gray-700 bg-white/40">
-                <span>Ambulance</span>
-                <a href="tel:102" class="text-green-600 hover:underline">102</a>
-             </div>
-          </div>
-        </section>
+        
     
       </main>
     </div>
@@ -225,17 +225,7 @@
            <div id="map-wrapper" class="absolute inset-0">
                <div id="map" class="absolute inset-0"></div>
 
-               <!-- Search Radius (Desktop Map Overlay) -->
-               <div class="absolute top-4 left-4 z-10 flex items-center gap-2 hidden md:flex">
-                  <div class="glass-card px-4 py-2 rounded-full text-sm font-semibold text-gray-800 flex items-center gap-2 shadow-sm border border-white/40 bg-white/60">
-                    Search Radius <span class="material-symbols-outlined text-sm">expand_more</span>
-                    <select id="radius-select-desktop" class="absolute inset-0 opacity-0 cursor-pointer" onchange="document.getElementById('radius-select').value=this.value; document.getElementById('radius-select').dispatchEvent(new Event('change'))">
-                      <option value="2000">2 km</option>
-                      <option value="5000" selected>5 km</option>
-                      <option value="10000">10 km</option>
-                      <option value="15000">15 km</option>
-                    </select>
-                  </div>
+               
                   <div id="spinner" class="spinner hidden bg-white/50 rounded-full w-8 h-8 flex items-center justify-center p-1"></div>
                </div>
     

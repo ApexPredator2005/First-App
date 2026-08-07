@@ -14,6 +14,7 @@
   transform: scale(0.95);
 }
 
+
 .pastel-glow {
   position: fixed;
   width: 100vw;
@@ -22,33 +23,32 @@
   left: 0;
   z-index: -1;
   background: 
-    radial-gradient(circle at 15% 50%, rgba(255, 180, 180, 0.4) 0%, transparent 40%),
-    radial-gradient(circle at 85% 50%, rgba(255, 200, 150, 0.4) 0%, transparent 40%),
-    radial-gradient(circle at 50% 10%, rgba(220, 240, 255, 0.4) 0%, transparent 40%),
-    radial-gradient(circle at 50% 90%, rgba(240, 220, 255, 0.4) 0%, transparent 40%),
-    #faf8f5;
+    radial-gradient(circle at 15% 50%, rgba(255, 230, 230, 0.4) 0%, transparent 40%),
+    radial-gradient(circle at 85% 50%, rgba(255, 240, 230, 0.4) 0%, transparent 40%),
+    radial-gradient(circle at 50% 10%, rgba(255, 245, 240, 0.6) 0%, transparent 40%),
+    #fdfbf7;
 }
 .glass-container {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
 }
-/* Pill Gradients */
-.pill-hospital { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); border-color: rgba(255,154,158,0.3); color: #fff; }
-.pill-hospital .pill-label, .pill-hospital .pill-count, .pill-hospital .material-symbols-outlined { color: #8e1c31; }
-.pill-police { background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); border-color: rgba(161,196,253,0.3); }
-.pill-police .pill-label, .pill-police .pill-count, .pill-police .material-symbols-outlined { color: #1a4f8b; }
-.pill-fire_station { background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); border-color: rgba(255,65,108,0.3); }
-.pill-fire_station .pill-label, .pill-fire_station .pill-count, .pill-fire_station .material-symbols-outlined { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-.pill-pharmacy { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); border-color: rgba(246,211,101,0.3); }
-.pill-pharmacy .pill-label, .pill-pharmacy .pill-count, .pill-pharmacy .material-symbols-outlined { color: #8a4a00; }
-.pill-veterinary_care { background: linear-gradient(135deg, #c471ed 0%, #f64f59 100%); border-color: rgba(196,113,237,0.3); }
-.pill-veterinary_care .pill-label, .pill-veterinary_care .pill-count, .pill-veterinary_care .material-symbols-outlined { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-.pill-blood_bank { background: linear-gradient(135deg, #870000 0%, #4a0000 100%); border-color: rgba(135,0,0,0.3); }
-.pill-blood_bank .pill-label, .pill-blood_bank .pill-count, .pill-blood_bank .material-symbols-outlined { color: #ffb3b3; }
 
+/* Pill Gradients */
+.pill-hospital { background: linear-gradient(135deg, #ffc0cb 0%, #ffb6c1 100%); border-color: transparent; }
+.pill-hospital .pill-label, .pill-hospital .pill-count, .pill-hospital .material-symbols-outlined { color: #8e1c31; }
+.pill-police { background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%); border-color: transparent; }
+.pill-police .pill-label, .pill-police .pill-count, .pill-police .material-symbols-outlined { color: #1a4f8b; }
+.pill-fire_station { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-color: transparent; }
+.pill-fire_station .pill-label, .pill-fire_station .pill-count, .pill-fire_station .material-symbols-outlined { color: #d35400; }
+.pill-pharmacy { background: linear-gradient(135deg, #ffcc80 0%, #ffb74d 100%); border-color: transparent; }
+.pill-pharmacy .pill-label, .pill-pharmacy .pill-count, .pill-pharmacy .material-symbols-outlined { color: #8a4a00; }
+.pill-veterinary_care { background: linear-gradient(135deg, #e1bee7 0%, #ce93d8 100%); border-color: transparent; }
+.pill-veterinary_care .pill-label, .pill-veterinary_care .pill-count, .pill-veterinary_care .material-symbols-outlined { color: #4a148c; }
+.pill-blood_bank { background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%); border-color: transparent; }
+.pill-blood_bank .pill-label, .pill-blood_bank .pill-count, .pill-blood_bank .material-symbols-outlined { color: #b71c1c; }
 /* Custom Scrollbar for left panel */
 .custom-scroll::-webkit-scrollbar {
   width: 6px;
