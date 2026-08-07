@@ -36,12 +36,12 @@ const state = {
 };
 
 const CATEGORY_META = {
-  hospital: { label: "Hospitals", singular: "Hospital", icon: "🏥", color: "#ff3366", searchTerms: "hospital" },
-  police: { label: "Police Stations", singular: "Police Station", icon: "🚓", color: "#3b82f6", searchTerms: "police station" },
-  fire_station: { label: "Fire Stations", singular: "Fire Station", icon: "🚒", color: "#ff6a00", searchTerms: "fire station" },
-  pharmacy: { label: "24/7 Pharmacies", singular: "Pharmacy", icon: "💊", color: "#10b981", searchTerms: "pharmacy" },
-  veterinary_care: { label: "Veterinary Clinics", singular: "Vet Clinic", icon: "🐾", color: "#a855f7", searchTerms: "veterinary clinic" },
-  blood_bank: { label: "Blood Banks", singular: "Blood Bank", icon: "🩸", color: "#ef4444", searchTerms: "blood bank" }
+  hospital: { label: "Hospitals", singular: "Hospital", icon: "🏥", color: "#ff3366", searchTerms: ["hospital", "trauma center", "emergency room", "urgent care"] },
+  police: { label: "Police Stations", singular: "Police Station", icon: "🚓", color: "#3b82f6", searchTerms: ["police station"] },
+  fire_station: { label: "Fire Stations", singular: "Fire Station", icon: "🚒", color: "#ff6a00", searchTerms: ["fire station", "fire department", "fire rescue"] },
+  pharmacy: { label: "24/7 Pharmacies", singular: "Pharmacy", icon: "💊", color: "#10b981", searchTerms: ["pharmacy", "medical store", "drugstore", "chemist"] },
+  veterinary_care: { label: "Veterinary Clinics", singular: "Vet Clinic", icon: "🐾", color: "#a855f7", searchTerms: ["veterinary", "pet hospital", "animal hospital", "vet clinic"] },
+  blood_bank: { label: "Blood Banks", singular: "Blood Bank", icon: "🩸", color: "#ef4444", searchTerms: ["blood bank", "blood center", "blood donor", "plasma center", "plasma donation", "red cross"] }
 };
 
 // Default Safe Urban Fallback (if GPS permission denied or testing headless)
@@ -566,7 +566,7 @@ async function searchWithOverpassAPI(category, userLoc, radius) {
 }
 
 function searchWithClassicPlacesService(category, userLoc, radius) {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     if (!window.google || !google.maps || !google.maps.places || !state.map) {
       resolve([]);
       return;
@@ -574,34 +574,53 @@ function searchWithClassicPlacesService(category, userLoc, radius) {
     try {
       const service = new google.maps.places.PlacesService(state.map);
       const meta = CATEGORY_META[category] || { label: "Emergency" };
-      
-      const request = {
-        location: userLoc,
-        radius: Number(radius),
-        type: category === "blood_bank" ? "hospital" : (category === "veterinary_care" ? "veterinary_care" : category),
-        keyword: meta.searchTerms || meta.singular || meta.label
-      };
+      let keywords = meta.searchTerms;
+      if (!Array.isArray(keywords)) {
+        keywords = [keywords || meta.singular || meta.label];
+      }
 
-      service.nearbySearch(request, (results, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
-          const formatted = results.map(p => ({
-            id: p.place_id,
-            displayName: p.name,
-            formattedAddress: p.vicinity || p.formatted_address || "Address near location",
-            location: p.geometry ? p.geometry.location : new google.maps.LatLng(userLoc.lat, userLoc.lng),
-            rating: p.rating || 4.2,
-            userRatingCount: p.user_ratings_total || 38,
-            types: p.types || [category],
-            currentOpeningHours: p.opening_hours ? { openNow: p.opening_hours.open_now } : null,
-            internationalPhoneNumber: null,
-            nationalPhoneNumber: null,
-            websiteURI: null
-          }));
-          resolve(formatted);
-        } else {
-          resolve([]);
-        }
+      const type = category === "blood_bank" ? "hospital" : (category === "veterinary_care" ? "veterinary_care" : category);
+      
+      const allResults = [];
+      const seenIds = new Set();
+
+      const searchPromises = keywords.map(kw => {
+        return new Promise((res) => {
+          const request = {
+            location: userLoc,
+            radius: Number(radius),
+            type: type,
+            keyword: kw
+          };
+          service.nearbySearch(request, (results, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+              results.forEach(p => {
+                if (!seenIds.has(p.place_id)) {
+                  seenIds.add(p.place_id);
+                  allResults.push({
+                    id: p.place_id,
+                    displayName: p.name,
+                    formattedAddress: p.vicinity || p.formatted_address || "Address near location",
+                    location: p.geometry ? p.geometry.location : new google.maps.LatLng(userLoc.lat, userLoc.lng),
+                    rating: p.rating || 4.2,
+                    userRatingCount: p.user_ratings_total || 38,
+                    types: p.types || [category],
+                    currentOpeningHours: p.opening_hours ? { openNow: p.opening_hours.open_now } : null,
+                    internationalPhoneNumber: null,
+                    nationalPhoneNumber: null,
+                    websiteURI: null
+                  });
+                }
+              });
+            }
+            res(); // resolve empty if failed or done
+          });
+        });
       });
+
+      await Promise.all(searchPromises);
+      resolve(allResults);
+
     } catch(e) {
       console.warn("Classic PlacesService search error:", e);
       resolve([]);
