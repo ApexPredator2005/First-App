@@ -132,7 +132,7 @@ body::after {
 
 .map-location-btn {
   position: absolute;
-  bottom: 24px;
+  bottom: 90px;
   right: 24px;
   width: 50px;
   height: 50px;
@@ -408,14 +408,14 @@ body::after {
    ========================================================================== */
 .main-workspace {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: 1rem;
   flex: 1;
   min-height: 0;
 }
 
 .map-stage {
-  order: 2; /* Map on right */
+  order: 1; /* Map on left */
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.5);
@@ -434,7 +434,7 @@ body::after {
 }
 
 .sidebar-panel {
-  order: 1; /* Sidebar on left */
+  order: 2; /* Sidebar on right */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -464,7 +464,9 @@ body::after {
 /* Horizontal Category Pills */
 .category-pills {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
   gap: 0.55rem;
   padding: 0 1rem 0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -552,7 +554,7 @@ body::after {
 
 /* Place Cards — Micro-Interactions & Semantic Border Highlights */
 .place-card {
-  background: rgba(28, 32, 41, 0.85);
+  background: var(--bg-glass-card);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   padding: 1rem;
@@ -664,7 +666,7 @@ body::after {
 .sidebar-footer { padding: 0.5rem 1rem; border-top: 1px solid rgba(255,255,255,0.06); }
 
 .emergency-banner {
-  background: rgba(28, 32, 41, 0.85);
+  background: var(--bg-glass-card);
   border: 1px solid rgba(251, 113, 133, 0.3);
   padding: 0.65rem 0.8rem;
   border-radius: var(--radius-md);
