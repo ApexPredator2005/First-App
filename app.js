@@ -35,14 +35,13 @@ const state = {
   lastRouteResponse: null
 };
 
-// Category Metadata Mapping
 const CATEGORY_META = {
-  hospital: { label: "Hospitals", singular: "Hospital", icon: "🏥", color: "#ff3366" },
-  police: { label: "Police Stations", singular: "Police Station", icon: "🚓", color: "#3b82f6" },
-  fire_station: { label: "Fire Stations", singular: "Fire Station", icon: "🚒", color: "#ff6a00" },
-  pharmacy: { label: "24/7 Pharmacies", singular: "Pharmacy", icon: "💊", color: "#10b981" },
-  veterinary_care: { label: "Veterinary Clinics", singular: "Vet Clinic", icon: "🐾", color: "#a855f7" },
-  blood_bank: { label: "Blood Banks", singular: "Blood Bank", icon: "🩸", color: "#ef4444" }
+  hospital: { label: "Hospitals", singular: "Hospital", icon: "🏥", color: "#ff3366", searchTerms: "hospital OR trauma center OR trauma centre OR emergency room OR urgent care" },
+  police: { label: "Police Stations", singular: "Police Station", icon: "🚓", color: "#3b82f6", searchTerms: "police station" },
+  fire_station: { label: "Fire Stations", singular: "Fire Station", icon: "🚒", color: "#ff6a00", searchTerms: "fire station OR fire department OR fire rescue OR fire engine station" },
+  pharmacy: { label: "24/7 Pharmacies", singular: "Pharmacy", icon: "💊", color: "#10b981", searchTerms: "pharmacy OR medical store OR drugstore OR chemist OR drug store" },
+  veterinary_care: { label: "Veterinary Clinics", singular: "Vet Clinic", icon: "🐾", color: "#a855f7", searchTerms: "veterinary OR pet hospital OR animal hospital OR vet clinic" },
+  blood_bank: { label: "Blood Banks", singular: "Blood Bank", icon: "🩸", color: "#ef4444", searchTerms: "blood bank OR blood center OR blood centre OR blood donor center OR blood donor centre OR plasma center OR plasma centre OR plasma donation center OR plasma donation centre OR red cross blood donation OR bloodbank" }
 };
 
 // Default Safe Urban Fallback (if GPS permission denied or testing headless)
@@ -580,7 +579,7 @@ function searchWithClassicPlacesService(category, userLoc, radius) {
         location: userLoc,
         radius: Number(radius),
         type: category === "blood_bank" ? "hospital" : (category === "veterinary_care" ? "veterinary_care" : category),
-        keyword: meta.singular || meta.label
+        keyword: meta.searchTerms || meta.singular || meta.label
       };
 
       service.nearbySearch(request, (results, status) => {
@@ -625,11 +624,12 @@ function applyCategoryFilters(places, category) {
         "pathology", "diagnostic", "lab", "dental", "dentist", "eye care", 
         "physio", "spa", "beauty", "nursing home"
       ];
+      const includeWords = [
+        "hospital", "medical college", "aiims", 
+        "trauma center", "trauma centre", "emergency room", "urgent care"
+      ];
       const hasExcluded = excludeWords.some(w => nameLower.includes(w));
-      if (hasExcluded) {
-        if (nameLower.includes("hospital") || nameLower.includes("medical college") || nameLower.includes("aiims")) {
-          return true;
-        }
+      if (hasExcluded && !includeWords.some(w => nameLower.includes(w))) {
         return false;
       }
       return true;
@@ -646,17 +646,47 @@ function applyCategoryFilters(places, category) {
 
     if (category === "fire_station") {
       const excludeWords = ["hospital", "police", "pharmacy", "clinic", "school", "hotel"];
+      const includeWords = ["fire", "fire department", "fire rescue", "fire engine station"];
       const hasExcluded = excludeWords.some(w => nameLower.includes(w));
-      if (hasExcluded && !nameLower.includes("fire")) {
+      if (hasExcluded && !includeWords.some(w => nameLower.includes(w))) {
         return false;
       }
       return true;
     }
 
     if (category === "pharmacy") {
-      const excludeWords = ["police", "fire station", "veterinary"];
+      const excludeWords = ["police", "fire station", "veterinary", "hospital", "clinic"];
+      const includeWords = ["pharmacy", "medical store", "drugstore", "chemist", "drug store"];
       const hasExcluded = excludeWords.some(w => nameLower.includes(w));
-      if (hasExcluded) return false;
+      if (hasExcluded && !includeWords.some(w => nameLower.includes(w))) {
+        return false;
+      }
+      return true;
+    }
+
+    if (category === "veterinary_care") {
+      const excludeWords = ["human", "pharmacy", "dentist", "medical", "hospital", "clinic"];
+      const includeWords = ["vet", "veterinary", "pet hospital", "animal hospital", "vet clinic"];
+      const hasExcluded = excludeWords.some(w => nameLower.includes(w));
+      if (hasExcluded && !includeWords.some(w => nameLower.includes(w))) {
+        return false;
+      }
+      return true;
+    }
+
+    if (category === "blood_bank") {
+      const excludeWords = ["clinic", "pharmacy", "dentist", "eye", "police", "fire", "school"];
+      const includeWords = [
+        "blood bank", "bloodbank", "blood center", "blood centre", 
+        "blood donor center", "blood donor centre", 
+        "plasma center", "plasma centre", 
+        "plasma donation center", "plasma donation centre", 
+        "red cross blood donation"
+      ];
+      const hasExcluded = excludeWords.some(w => nameLower.includes(w));
+      if (hasExcluded && !includeWords.some(w => nameLower.includes(w))) {
+        return false;
+      }
       return true;
     }
 
