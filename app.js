@@ -565,7 +565,7 @@ async function searchWithOverpassAPI(category, userLoc, radius) {
   }
 }
 
-function searchWithClassicPlacesService(category, userLoc, radius) {
+function searchWithClassicPlacesService(category, userLoc, radius, onResultsUpdate) {
   return new Promise(async (resolve) => {
     if (!window.google || !google.maps || !google.maps.places || !state.map) {
       resolve([]);
@@ -586,14 +586,11 @@ function searchWithClassicPlacesService(category, userLoc, radius) {
 
       const searchPromises = keywords.map(kw => {
         return new Promise((res) => {
-          const request = {
-            location: userLoc,
-            radius: Number(radius),
-            type: type,
-            keyword: kw
-          };
-          service.nearbySearch(request, (results, status) => {
+          let resolvedFirstPage = false;
+          
+          const handleResults = (results, status, paginationObj) => {
             if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+              let hasNew = false;
               results.forEach(p => {
                 if (!seenIds.has(p.place_id)) {
                   seenIds.add(p.place_id);
@@ -610,11 +607,44 @@ function searchWithClassicPlacesService(category, userLoc, radius) {
                     nationalPhoneNumber: null,
                     websiteURI: null
                   });
+                  hasNew = true;
                 }
               });
+
+              if (hasNew && resolvedFirstPage && onResultsUpdate) {
+                onResultsUpdate([...allResults]);
+              }
+
+              if (!resolvedFirstPage) {
+                resolvedFirstPage = true;
+                res();
+              }
+
+              // Fetch subsequent pages automatically (Google enforces a 2-second delay between pages)
+              if (paginationObj && paginationObj.hasNextPage) {
+                setTimeout(() => {
+                  try {
+                    paginationObj.nextPage();
+                  } catch (err) {
+                    console.warn("Pagination nextPage failed:", err);
+                  }
+                }, 2000);
+              }
+            } else {
+              if (!resolvedFirstPage) {
+                resolvedFirstPage = true;
+                res();
+              }
             }
-            res(); // resolve empty if failed or done
-          });
+          };
+
+          const request = {
+            location: userLoc,
+            radius: Number(radius),
+            type: type,
+            keyword: kw
+          };
+          service.nearbySearch(request, handleResults);
         });
       });
 
@@ -717,6 +747,75 @@ let activeSearchId = 0;
 
 // ============================================================================
 // Places API (New) - Dynamic Nearby Scanner
+function processAndRenderResults(places, category, searchId, fitBounds = true) {
+  if (searchId !== activeSearchId || state.currentCategory !== category) {
+    return;
+  }
+
+  const meta = CATEGORY_META[category] || { label: "Emergency" };
+
+  // Filter ONLY places with REAL non-empty names and EXACT distance <= searchRadius
+  let filtered = (places || []).filter(p => {
+    let placeName = "";
+    if (typeof p.displayName === "string") placeName = p.displayName;
+    else if (p.displayName && p.displayName.text) placeName = p.displayName.text;
+    else if (p.name) placeName = p.name;
+
+    if (!placeName || typeof placeName !== "string" || placeName.trim() === "" || placeName.includes("#")) {
+      return false;
+    }
+
+    const dist = getApproxDistance(state.userLocation, p.location);
+    return dist <= Number(state.searchRadius);
+  });
+
+  // Apply strict category type filter
+  filtered = applyCategoryFilters(filtered, category);
+
+  state.placesList = filtered;
+
+  // Sort results by distance from user location
+  state.placesList.sort((a, b) => {
+    const distA = getApproxDistance(state.userLocation, a.location);
+    const distB = getApproxDistance(state.userLocation, b.location);
+    return distA - distB;
+  });
+
+  // Clear existing DOM and markers
+  DOM.placesFeed.innerHTML = "";
+  clearPlaceMarkers();
+
+  updatePillCount(category, state.placesList.length);
+  DOM.spinner.style.display = "none";
+
+  if (state.placesList.length === 0) {
+    const radiusKm = Number(state.searchRadius) / 1000;
+    DOM.feedStatus.textContent = `0 verified ${meta.label.toLowerCase()} found within ${radiusKm} km`;
+    DOM.placesFeed.innerHTML = `
+      <div class="empty-state animate-in" style="padding: 2.5rem 1rem; text-align: center; color: #8e8e93;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
+        <h4 style="color: #fff; margin-bottom: 0.25rem;">No Verified ${meta.label} Found</h4>
+        <p style="font-size: 0.88rem; max-width: 320px; margin: 0 auto;">No real ${meta.label.toLowerCase()} with verified names found within ${radiusKm} km of your detected location.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.75rem; color: #007aff; font-weight: 500;">Try selecting a larger search radius (5 km, 10 km, 15 km).</p>
+      </div>
+    `;
+    return;
+  }
+
+  DOM.feedStatus.textContent = `Located ${state.placesList.length} verified ${meta.label.toLowerCase()} nearby`;
+
+  // Render cards and map pins
+  state.placesList.forEach((place, index) => {
+    renderPlaceCard(place, index);
+    renderPlaceMarker(place, index);
+  });
+
+  // Auto-fit map viewport if markers exist
+  if (fitBounds) {
+    fitMapToResults();
+  }
+}
+
 // ============================================================================
 async function performNearbySearch() {
   if (!state.userLocation) return;
@@ -770,7 +869,10 @@ async function performNearbySearch() {
 
   // Strategy 2: Classic PlacesService
   if (!places || places.length === 0) {
-    places = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius);
+    places = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius, (updatedPlaces) => {
+      // Background callback to render additional pages (Page 2 & 3) dynamically
+      processAndRenderResults(updatedPlaces, category, searchId, false);
+    });
   }
 
   // Strategy 3: OpenStreetMap Overpass API (real data only)
@@ -778,65 +880,8 @@ async function performNearbySearch() {
     places = await searchWithOverpassAPI(category, state.userLocation, state.searchRadius);
   }
 
-  // Filter ONLY places with REAL non-empty names and EXACT distance <= searchRadius
-  places = (places || []).filter(p => {
-    let placeName = "";
-    if (typeof p.displayName === "string") placeName = p.displayName;
-    else if (p.displayName && p.displayName.text) placeName = p.displayName.text;
-    else if (p.name) placeName = p.name;
-
-    if (!placeName || typeof placeName !== "string" || placeName.trim() === "" || placeName.includes("#")) {
-      return false;
-    }
-
-    const dist = getApproxDistance(state.userLocation, p.location);
-    return dist <= Number(state.searchRadius);
-  });
-
-  // Apply strict category type filter
-  places = applyCategoryFilters(places, category);
-
-  // Abort if another search started while fetching
-  if (searchId !== activeSearchId || state.currentCategory !== category) {
-    return;
-  }
-
-  state.placesList = places;
-
-  // Sort results by distance from user location
-  state.placesList.sort((a, b) => {
-    const distA = getApproxDistance(state.userLocation, a.location);
-    const distB = getApproxDistance(state.userLocation, b.location);
-    return distA - distB;
-  });
-
-  updatePillCount(category, state.placesList.length);
-  DOM.spinner.style.display = "none";
-
-  if (state.placesList.length === 0) {
-    const radiusKm = Number(state.searchRadius) / 1000;
-    DOM.feedStatus.textContent = `0 verified ${meta.label.toLowerCase()} found within ${radiusKm} km`;
-    DOM.placesFeed.innerHTML = `
-      <div class="empty-state animate-in" style="padding: 2.5rem 1rem; text-align: center; color: #8e8e93;">
-        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
-        <h4 style="color: #fff; margin-bottom: 0.25rem;">No Verified ${meta.label} Found</h4>
-        <p style="font-size: 0.88rem; max-width: 320px; margin: 0 auto;">No real ${meta.label.toLowerCase()} with verified names found within ${radiusKm} km of your detected location.</p>
-        <p style="font-size: 0.8rem; margin-top: 0.75rem; color: #007aff; font-weight: 500;">Try selecting a larger search radius (5 km, 10 km, 15 km).</p>
-      </div>
-    `;
-    return;
-  }
-
-  DOM.feedStatus.textContent = `Located ${state.placesList.length} verified ${meta.label.toLowerCase()} nearby`;
-
-  // Render cards and map pins
-  state.placesList.forEach((place, index) => {
-    renderPlaceCard(place, index);
-    renderPlaceMarker(place, index);
-  });
-
-  // Auto-fit map viewport if markers exist
-  fitMapToResults();
+  // Initial render of page 1 results
+  processAndRenderResults(places, category, searchId, true);
 }
 
 function renderPlaceCard(place, index) {
