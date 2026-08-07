@@ -176,7 +176,7 @@ function populateLibraries() {
 
 async function initializeAppEngine() {
   try {
-    if (DOM.feedStatus) DOM.feedStatus.textContent = "Loading Emergency System...";
+    DOM.feedStatus.textContent = "Loading Emergency System...";
     DOM.spinner.style.display = "inline-block";
 
     // 1. Attempt loading Google Maps Script if API key is provided
@@ -188,7 +188,7 @@ async function initializeAppEngine() {
     if (window.google && window.google.maps) {
       try { renderMap(); } catch(e) { console.warn("Map render notice:", e); }
     } else {
-      if (DOM.feedStatus) DOM.feedStatus.textContent = "Emergency Demo Mode Active";
+      DOM.feedStatus.textContent = "Emergency Demo Mode Active";
     }
 
     // 3. Acquire User GPS Geolocation
@@ -322,7 +322,7 @@ async function detectUserLocation() {
       resolve(coords);
       reverseGeocode(coords.lat, coords.lng).then(address => {
         if (address && DOM.coordsDisplay) {
-          if (DOM.coordsDisplay) DOM.coordsDisplay.textContent = address;
+          DOM.coordsDisplay.textContent = address;
         }
       });
     };
@@ -829,7 +829,7 @@ function processAndRenderResults(places, category, searchId, fitBounds = true) {
   });
 
   // Clear existing DOM and markers
-  if (DOM.placesFeed) DOM.placesFeed.innerHTML = "";
+  DOM.placesFeed.innerHTML = "";
   clearPlaceMarkers();
 
   updatePillCount(category, state.placesList.length);
@@ -837,8 +837,8 @@ function processAndRenderResults(places, category, searchId, fitBounds = true) {
 
   if (state.placesList.length === 0) {
     const radiusKm = Number(state.searchRadius) / 1000;
-    if (DOM.feedStatus) DOM.feedStatus.textContent = `0 verified ${meta.label.toLowerCase()} found within ${radiusKm} km`;
-    if (DOM.placesFeed) DOM.placesFeed.innerHTML = `
+    DOM.feedStatus.textContent = `0 verified ${meta.label.toLowerCase()} found within ${radiusKm} km`;
+    DOM.placesFeed.innerHTML = `
       <div class="empty-state animate-in" style="padding: 2.5rem 1rem; text-align: center; color: #8e8e93;">
         <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
         <h4 style="color: #fff; margin-bottom: 0.25rem;">No Verified ${meta.label} Found</h4>
@@ -849,7 +849,7 @@ function processAndRenderResults(places, category, searchId, fitBounds = true) {
     return;
   }
 
-  if (DOM.feedStatus) DOM.feedStatus.textContent = `Located ${state.placesList.length} verified ${meta.label.toLowerCase()} nearby`;
+  DOM.feedStatus.textContent = `Located ${state.placesList.length} verified ${meta.label.toLowerCase()} nearby`;
 
   // Render cards and map pins
   const markers = [];
@@ -890,9 +890,9 @@ async function performNearbySearch() {
     return;
   }
 
-  if (DOM.feedStatus) DOM.feedStatus.textContent = `Scanning for nearby ${meta.label}...`;
+  DOM.feedStatus.textContent = `Scanning for nearby ${meta.label}...`;
   DOM.spinner.style.display = "inline-block";
-  if (DOM.placesFeed) DOM.placesFeed.innerHTML = "";
+  DOM.placesFeed.innerHTML = "";
   clearPlaceMarkers();
 
   let places = [];
@@ -965,9 +965,10 @@ function renderPlaceCard(place, index) {
   if (isOpen === false) statusHTML = `<span class="badge-status badge-closed">🔴 Closed</span>`;
 
   const li = document.createElement("li");
-  li.className = "p-4 rounded-2xl bg-white/40 border border-white/60 mb-4 cursor-pointer hover:bg-white/60 transition-colors animate-in";
+  li.className = "place-card animate-in";
   li.setAttribute("data-type", state.currentCategory);
   li.style.animationDelay = `${Math.min(index * 70, 420)}ms`;
+  const phoneNum = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
 
   let placeName = "Emergency Unit";
   if (typeof place.displayName === "string") {
@@ -978,25 +979,31 @@ function renderPlaceCard(place, index) {
     placeName = place.name;
   }
 
-  const phoneNum = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
-  const contactLinks = [];
-  if (phoneNum) contactLinks.push(`<a href="tel:${phoneNum}" class="text-blue-600 font-medium hover:underline" onclick="event.stopPropagation();">📞 ${phoneNum}</a>`);
-  if (place.websiteURI) contactLinks.push(`<a href="${place.websiteURI}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 font-medium hover:underline" onclick="event.stopPropagation();">🌐 Website</a>`);
-
   li.innerHTML = `
-    <div class="flex justify-between items-start mb-1">
-      <h3 class="font-bold text-blue-900 truncate pr-2">${placeName}</h3>
-      <span class="text-xs font-semibold ${isOpen === true ? 'text-green-600' : (isOpen === false ? 'text-red-600' : 'text-gray-400')} whitespace-nowrap">
-        ${isOpen === true ? 'Open' : (isOpen === false ? 'Closed' : 'N/A')}
-      </span>
+    <div class="card-top">
+      <h3>${placeName}</h3>
+      ${statusHTML}
     </div>
-    <p class="text-xs text-gray-500 mb-1 truncate">${place.formattedAddress || "Address not available"}</p>
-    <div class="flex justify-between items-center text-xs text-gray-500 mb-3">
-      <span>${distKm} km away</span>
-      ${place.rating ? `<span class="flex items-center gap-1 font-medium text-yellow-600">⭐ ${place.rating}</span>` : ""}
+    <div class="card-body">
+      <p class="card-address">📫 ${place.formattedAddress || "Address not available"}</p>
     </div>
-    ${contactLinks.length > 0 ? `<div class="flex gap-3 text-xs mb-3 bg-white/30 p-2 rounded-lg">${contactLinks.join(' <span class="text-gray-300">|</span> ')}</div>` : ''}
-    <button class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold text-sm shadow-lg squadron-card btn-route" data-index="${index}">Quick Route</button>
+    <div class="card-contact">
+      ${phoneNum ? `<a href="tel:${phoneNum}" class="contact-chip phone-chip" onclick="event.stopPropagation();" title="Call now">
+        <span>📞</span> ${phoneNum}
+      </a>` : ""}
+      ${place.websiteURI ? `<a href="${place.websiteURI}" target="_blank" rel="noopener noreferrer" class="contact-chip web-chip" onclick="event.stopPropagation();" title="Visit website">
+        <span>🌐</span> Website
+      </a>` : ""}
+    </div>
+    <div class="card-footer">
+      <div class="card-metrics">
+        <span class="dist-badge">📍 ${distKm} km away</span>
+        ${place.rating ? `<span class="rating-badge">⭐ ${place.rating} (${place.userRatingCount || 0})</span>` : ""}
+      </div>
+      <button class="btn btn-route" data-index="${index}" aria-label="Navigate to ${placeName}">
+        <span>⚡ Quick Route</span>
+      </button>
+    </div>
   `;
 
   // Click card to zoom and open details modal
@@ -1098,10 +1105,10 @@ function fitMapToResults() {
 // Uses google.maps global namespace (available after Loader initializes SDK)
 // ============================================================================
 async function calculateAndRenderRoute(place) {
-  if (DOM.routeHud) DOM.routeHud.classList.remove("hidden");
-  if (DOM.routeDuration) DOM.routeDuration.textContent = "Calculating...";
-  if (DOM.routeDistance) DOM.routeDistance.textContent = "-- km";
-  if (DOM.routeSummary) DOM.routeSummary.textContent = `Computing shortest driving route to ${place.displayName}...`;
+  DOM.routeHud.classList.remove("hidden");
+  DOM.routeDuration.textContent = "Calculating...";
+  DOM.routeDistance.textContent = "-- km";
+  DOM.routeSummary.textContent = `Computing shortest driving route to ${place.displayName}...`;
   
   const turnStepsBox = document.getElementById("turn-steps-box");
   const turnStepsList = document.getElementById("turn-steps-list");
@@ -1154,9 +1161,9 @@ async function calculateAndRenderRoute(place) {
       const bestRoute = response.routes[0];
       const leg = bestRoute.legs[0];
       
-      if (DOM.routeDuration) DOM.routeDuration.textContent = leg.duration ? leg.duration.text : "N/A";
-      if (DOM.routeDistance) DOM.routeDistance.textContent = leg.distance ? leg.distance.text : "-- km";
-      if (DOM.routeSummary) DOM.routeSummary.textContent = `Shortest route via ${bestRoute.summary || "main road"}. ${leg.duration ? leg.duration.text : ""} drive.`;
+      DOM.routeDuration.textContent = leg.duration ? leg.duration.text : "N/A";
+      DOM.routeDistance.textContent = leg.distance ? leg.distance.text : "-- km";
+      DOM.routeSummary.textContent = `Shortest route via ${bestRoute.summary || "main road"}. ${leg.duration ? leg.duration.text : ""} drive.`;
 
       // Build Google Maps navigation URL (opens turn-by-turn voice navigation)
       const destLat = place.location.lat();
@@ -1231,9 +1238,9 @@ async function calculateAndRenderRoute(place) {
 
         const distKm = (route.distance / 1000).toFixed(1);
         const approxMins = Math.round(route.duration / 60);
-        if (DOM.routeDuration) DOM.routeDuration.textContent = `~${approxMins} min`;
-        if (DOM.routeDistance) DOM.routeDistance.textContent = `${distKm} km`;
-        if (DOM.routeSummary) DOM.routeSummary.textContent = `Route shown using OpenStreetMap routing.`;
+        DOM.routeDuration.textContent = `~${approxMins} min`;
+        DOM.routeDistance.textContent = `${distKm} km`;
+        DOM.routeSummary.textContent = `Route shown using OpenStreetMap routing.`;
       } else {
         throw new Error("No OSRM route found");
       }
@@ -1251,9 +1258,9 @@ async function calculateAndRenderRoute(place) {
 
       const distKm = (getApproxDistance(state.userLocation, {lat: destLat, lng: destLng}) / 1000).toFixed(1);
       const approxMins = Math.round((distKm / 35) * 60) + 2;
-      if (DOM.routeDuration) DOM.routeDuration.textContent = `~${approxMins} min*`;
-      if (DOM.routeDistance) DOM.routeDistance.textContent = `${distKm} km`;
-      if (DOM.routeSummary) DOM.routeSummary.textContent = `Approximate route shown. Enable Directions API on your key for real road navigation.`;
+      DOM.routeDuration.textContent = `~${approxMins} min*`;
+      DOM.routeDistance.textContent = `${distKm} km`;
+      DOM.routeSummary.textContent = `Approximate route shown. Enable Directions API on your key for real road navigation.`;
     }
     
     const fallbackNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${srcLat},${srcLng}&destination=${destLat},${destLng}&travelmode=driving`;
@@ -1271,11 +1278,11 @@ function openPlaceDetailsModal(place) {
   }
   const meta = CATEGORY_META[state.currentCategory];
 
-  if (DOM.modalPlaceName) DOM.modalPlaceName.textContent = place.displayName || "Emergency Facility";
-  if (DOM.modalAddress) DOM.modalAddress.textContent = place.formattedAddress || "Address not reported";
+  DOM.modalPlaceName.textContent = place.displayName || "Emergency Facility";
+  DOM.modalAddress.textContent = place.formattedAddress || "Address not reported";
   
   // Tags
-  if (DOM.modalTags) DOM.modalTags.innerHTML = `<span class="tag-chip" style="background: ${meta.color}">${meta.icon} ${meta.label}</span>`;
+  DOM.modalTags.innerHTML = `<span class="tag-chip" style="background: ${meta.color}">${meta.icon} ${meta.label}</span>`;
   if (place.types) {
     place.types.slice(0, 2).forEach(t => {
       DOM.modalTags.innerHTML += `<span class="tag-chip">${t.replace("_", " ")}</span>`;
@@ -1290,26 +1297,26 @@ function openPlaceDetailsModal(place) {
 
   // Editorial Summary
   if (place.editorialSummary) {
-    if (DOM.modalSummarySection) DOM.modalSummarySection.classList.remove("hidden");
-    if (DOM.modalEditorialSummary) DOM.modalEditorialSummary.textContent = place.editorialSummary;
+    DOM.modalSummarySection.classList.remove("hidden");
+    DOM.modalEditorialSummary.textContent = place.editorialSummary;
   } else {
-    if (DOM.modalSummarySection) DOM.modalSummarySection.classList.add("hidden");
+    DOM.modalSummarySection.classList.add("hidden");
   }
 
   // Contact links
   if (place.internationalPhoneNumber) {
-    if (DOM.modalPhoneLink) DOM.modalPhoneLink.classList.remove("hidden");
+    DOM.modalPhoneLink.classList.remove("hidden");
     DOM.modalPhoneLink.setAttribute("href", `tel:${place.internationalPhoneNumber}`);
     DOM.modalPhoneLink.querySelector("span").textContent = `📞 Call ${place.internationalPhoneNumber}`;
   } else {
-    if (DOM.modalPhoneLink) DOM.modalPhoneLink.classList.add("hidden");
+    DOM.modalPhoneLink.classList.add("hidden");
   }
 
   if (place.websiteURI || place.googleMapsURI) {
-    if (DOM.modalWebsiteLink) DOM.modalWebsiteLink.classList.remove("hidden");
+    DOM.modalWebsiteLink.classList.remove("hidden");
     DOM.modalWebsiteLink.setAttribute("href", place.websiteURI || place.googleMapsURI);
   } else {
-    if (DOM.modalWebsiteLink) DOM.modalWebsiteLink.classList.add("hidden");
+    DOM.modalWebsiteLink.classList.add("hidden");
   }
 
   DOM.placeModal.showModal();
@@ -1414,14 +1421,14 @@ function setupEventListeners() {
   });
 
   // Radius selector
-  if (DOM.radiusSelect) DOM.radiusSelect.addEventListener("change", (e) => {
+  DOM.radiusSelect.addEventListener("change", (e) => {
     state.searchRadius = parseInt(e.target.value);
     performNearbySearch();
   });
 
   // GPS Rescan
   if (DOM.rescanBtn) {
-    if (DOM.rescanBtn) DOM.rescanBtn.addEventListener("click", async () => {
+    DOM.rescanBtn.addEventListener("click", async () => {
       await detectUserLocation();
       performNearbySearch();
     });
@@ -1429,8 +1436,8 @@ function setupEventListeners() {
 
   // Location Modal Triggers & Custom Address Search
   if (DOM.openLocationModalBtn) {
-    if (DOM.openLocationModalBtn) DOM.openLocationModalBtn.addEventListener("click", () => {
-      if (DOM.locationErrorText) DOM.locationErrorText.classList.add("hidden");
+    DOM.openLocationModalBtn.addEventListener("click", () => {
+      DOM.locationErrorText.classList.add("hidden");
       DOM.locationModal.showModal();
     });
   }
@@ -1445,7 +1452,7 @@ function setupEventListeners() {
       pressTimer = window.setTimeout(() => {
         // Long Press triggered
         pressTimer = null;
-        if (DOM.locationErrorText) DOM.locationErrorText.classList.add("hidden");
+        DOM.locationErrorText.classList.add("hidden");
         DOM.locationModal.showModal();
       }, longPressDuration);
     };
@@ -1470,29 +1477,29 @@ function setupEventListeners() {
       }
     };
 
-    if (DOM.mapLocationBtn) DOM.mapLocationBtn.addEventListener("mousedown", startPress);
-    if (DOM.mapLocationBtn) DOM.mapLocationBtn.addEventListener("touchstart", startPress);
+    DOM.mapLocationBtn.addEventListener("mousedown", startPress);
+    DOM.mapLocationBtn.addEventListener("touchstart", startPress);
 
-    if (DOM.mapLocationBtn) DOM.mapLocationBtn.addEventListener("mouseup", handleMouseUp);
-    if (DOM.mapLocationBtn) DOM.mapLocationBtn.addEventListener("touchend", handleMouseUp);
-    if (DOM.mapLocationBtn) DOM.mapLocationBtn.addEventListener("mouseleave", cancelPress);
-    if (DOM.mapLocationBtn) DOM.mapLocationBtn.addEventListener("touchcancel", cancelPress);
+    DOM.mapLocationBtn.addEventListener("mouseup", handleMouseUp);
+    DOM.mapLocationBtn.addEventListener("touchend", handleMouseUp);
+    DOM.mapLocationBtn.addEventListener("mouseleave", cancelPress);
+    DOM.mapLocationBtn.addEventListener("touchcancel", cancelPress);
   }
-  if (DOM.closeLocationModal) DOM.closeLocationModal.addEventListener("click", () => DOM.locationModal.close());
+  DOM.closeLocationModal.addEventListener("click", () => DOM.locationModal.close());
   
-  if (DOM.retryGpsBtn) DOM.retryGpsBtn.addEventListener("click", async () => {
+  DOM.retryGpsBtn.addEventListener("click", async () => {
     DOM.locationModal.close();
     await detectUserLocation();
     performNearbySearch();
   });
 
-  if (DOM.searchLocationBtn) DOM.searchLocationBtn.addEventListener("click", async () => {
+  DOM.searchLocationBtn.addEventListener("click", async () => {
     const query = DOM.customLocationInput.value.trim();
     if (!query) return;
 
     try {
-      if (DOM.searchLocationBtn) DOM.searchLocationBtn.textContent = "Searching...";
-      if (DOM.locationErrorText) DOM.locationErrorText.classList.add("hidden");
+      DOM.searchLocationBtn.textContent = "Searching...";
+      DOM.locationErrorText.classList.add("hidden");
       const { Place } = state.libraries.places;
       
       const { places } = await Place.searchByText({
@@ -1508,26 +1515,26 @@ function setupEventListeners() {
         DOM.customLocationInput.value = "";
         performNearbySearch();
       } else {
-        if (DOM.locationErrorText) DOM.locationErrorText.textContent = "Could not find coordinates for this place name or address.";
-        if (DOM.locationErrorText) DOM.locationErrorText.classList.remove("hidden");
+        DOM.locationErrorText.textContent = "Could not find coordinates for this place name or address.";
+        DOM.locationErrorText.classList.remove("hidden");
       }
     } catch (err) {
       console.error("Address text search failed:", err);
-      if (DOM.locationErrorText) DOM.locationErrorText.textContent = "Error communicating with Places API. Check API permissions.";
-      if (DOM.locationErrorText) DOM.locationErrorText.classList.remove("hidden");
+      DOM.locationErrorText.textContent = "Error communicating with Places API. Check API permissions.";
+      DOM.locationErrorText.classList.remove("hidden");
     } finally {
-      if (DOM.searchLocationBtn) DOM.searchLocationBtn.textContent = "Scan Here";
+      DOM.searchLocationBtn.textContent = "Scan Here";
     }
   });
 
   // Allow press Enter in location input
-  if (DOM.customLocationInput) DOM.customLocationInput.addEventListener("keypress", (e) => {
+  DOM.customLocationInput.addEventListener("keypress", (e) => {
     if (e.key === "Enter") DOM.searchLocationBtn.click();
   });
 
   // Close HUD
-  if (DOM.closeHudBtn) DOM.closeHudBtn.addEventListener("click", () => {
-    if (DOM.routeHud) DOM.routeHud.classList.add("hidden");
+  DOM.closeHudBtn.addEventListener("click", () => {
+    DOM.routeHud.classList.add("hidden");
     if (state.currentRoutePolyline) {
       state.currentRoutePolyline.setMap(null);
       state.currentRoutePolyline = null;
@@ -1535,15 +1542,15 @@ function setupEventListeners() {
   });
 
   // Modal Triggers
-  if (DOM.openSettingsBtn) DOM.openSettingsBtn.addEventListener("click", () => DOM.settingsModal.showModal());
-  if (DOM.closeSettingsModal) DOM.closeSettingsModal.addEventListener("click", () => closeModalSmooth(DOM.settingsModal));
-  if (DOM.closePlaceModal) DOM.closePlaceModal.addEventListener("click", () => closeModalSmooth(DOM.placeModal));
+  DOM.openSettingsBtn.addEventListener("click", () => DOM.settingsModal.showModal());
+  DOM.closeSettingsModal.addEventListener("click", () => closeModalSmooth(DOM.settingsModal));
+  DOM.closePlaceModal.addEventListener("click", () => closeModalSmooth(DOM.placeModal));
 
   // Toggle API Key Masking
   const toggleKeyBtn = document.getElementById("toggle-key-visibility");
   const keyToggleIcon = document.getElementById("key-toggle-icon");
   if (toggleKeyBtn && DOM.apiKeyInput) {
-    if (toggleKeyBtn) toggleKeyBtn.addEventListener("click", () => {
+    toggleKeyBtn.addEventListener("click", () => {
       if (DOM.apiKeyInput.type === "password") {
         DOM.apiKeyInput.type = "text";
         if (keyToggleIcon) keyToggleIcon.textContent = "🙈 Hide";
@@ -1554,7 +1561,7 @@ function setupEventListeners() {
     });
   }
 
-  if (DOM.modalRouteBtn) DOM.modalRouteBtn.addEventListener("click", () => {
+  DOM.modalRouteBtn.addEventListener("click", () => {
     closeModalSmooth(DOM.placeModal);
     if (state.selectedPlace) {
       calculateAndRenderRoute(state.selectedPlace);
@@ -1562,7 +1569,7 @@ function setupEventListeners() {
   });
 
   // Save Settings & Reboot Map Engine
-  if (DOM.saveSettingsBtn) DOM.saveSettingsBtn.addEventListener("click", async () => {
+  DOM.saveSettingsBtn.addEventListener("click", async () => {
     const enteredKey = DOM.apiKeyInput.value.trim();
     const enteredMapId = DOM.mapIdInput.value.trim() || "DEMO_MAP_ID";
     
@@ -1976,7 +1983,7 @@ function setupSOS() {
   }
   refreshSOSPhone();
 
-  if (sosBtn) sosBtn.addEventListener("click", (e) => {
+  sosBtn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (state.sosActive) {
@@ -2092,13 +2099,13 @@ function setupNavigation() {
   const startNavBtn = document.getElementById("start-nav-btn");
   const exitNavBtn = document.getElementById("exit-nav-btn");
 
-  if (startNavBtn) startNavBtn.addEventListener("click", () => {
+  startNavBtn.addEventListener("click", () => {
     if (state.lastRouteResponse && state.navDestination) {
       startInAppNavigation(state.lastRouteResponse, state.navDestination);
     }
   });
 
-  if (exitNavBtn) exitNavBtn.addEventListener("click", () => stopInAppNavigation());
+  exitNavBtn.addEventListener("click", () => stopInAppNavigation());
 }
 
 function startInAppNavigation(response, place) {
