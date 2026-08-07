@@ -26,54 +26,29 @@
     <!-- Top Glass Navigation Bar -->
     <header class="app-header glass-panel">
       <div class="logo-group">
-        <div class="logo-icon-wrap">
-          <div class="logo-icon heartbeat">🚨</div>
-          <span class="pulse-ring-outer"></span>
+        <div class="logo-icon-wrap" style="box-shadow: none;">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="url(#grad1)">
+             <defs>
+               <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                 <stop offset="0%" style="stop-color:#ff4b6e;stop-opacity:1" />
+                 <stop offset="100%" style="stop-color:#ff8da1;stop-opacity:1" />
+               </linearGradient>
+             </defs>
+             <path d="M12 2L8 6H4v4L2 12l2 2v4h4l4 4 4-4h4v-4l2-2-2-2v-4h-4L12 2zm0 13c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+             <path d="M11 9h2v2h2v2h-2v2h-2v-2H9v-2h2z" fill="white"/>
+          </svg>
         </div>
         <div class="logo-text">
           <h1>ResQNow</h1>
-          <span class="tagline">FIND HELP. FAST. ANYWHERE.</span>
         </div>
       </div>
 
-      <!-- Rotating Health Quote Ticker -->
-      <div class="health-quote-ticker" id="health-quote-ticker">
-        <span class="quote-icon">💡</span>
-        <span class="quote-text" id="quote-text">Invest in your body now, or pay interest on your health later.</span>
-      </div>
-
-      <!-- Real-Time Geolocation & Scan Tools -->
-      <div class="nav-controls">
-        <div class="status-badge gps-badge" id="location-status" title="Your current detected coordinates">
-          <span class="status-dot pulsing"></span>
-          <span id="coordinates-display">Scanning GPS Lock...</span>
-          <button id="rescan-btn" title="Re-scan GPS location" aria-label="Re-scan current location">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-          </button>
-          <button id="open-location-modal-btn" class="btn-tiny" title="Set address manually">
-            <span>Change</span>
-          </button>
-        </div>
-
-        <!-- Search Radius Dropdown -->
-        <div class="control-group">
-          <label for="radius-select">Radius:</label>
-          <select id="radius-select" aria-label="Search radius in kilometers">
-            <option value="2000">2 km</option>
-            <option value="5000" selected>5 km</option>
-            <option value="10000">10 km</option>
-            <option value="15000">15 km</option>
-          </select>
-        </div>
-
-
-        <!-- API Config Trigger -->
-        <button id="open-settings-btn" class="btn btn-settings" title="Configure Google Maps Demo Key / API Key">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-          <span>API</span>
+      <div class="nav-controls" style="margin-left: auto;">
+        <!-- API Config Trigger (Settings Gear) -->
+        <button id="open-settings-btn" class="btn btn-settings" title="Configure Settings" style="padding: 0.5rem; border-radius: 50%; background: var(--bg-glass);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
-        <button id="open-health-btn" class="btn btn-health" title="My Health Profile & Records">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <button id="open-health-btn" class="btn btn-health" title="My Health Profile & Records" style="border-radius: var(--radius-pill);">
           <span>My Health Profile</span>
         </button>
       </div>
@@ -168,7 +143,25 @@
       </aside>
 
       <!-- Left Interactive Map Display -->
-      <section id="map-container" class="map-stage glass-panel" style="order:2;">
+      <section id="map-container" class="map-stage glass-panel" style="order:2; position: relative;">
+        <!-- Overlaid Controls -->
+        <div class="map-overlaid-controls" style="position: absolute; top: 15px; left: 15px; z-index: 5;">
+          <div class="control-group glass-panel" style="padding: 0.5rem; border-radius: var(--radius-pill); display: flex; align-items: center; gap: 0.5rem;">
+            <label for="radius-select" style="font-size: 0.85rem; font-weight: 500; margin-left: 0.5rem;">Search Radius</label>
+            <select id="radius-select" aria-label="Search radius in kilometers" style="border: none; background: transparent; font-family: inherit; font-size: 0.9rem; font-weight: 600; outline: none; cursor: pointer;">
+              <option value="2000">2 km</option>
+              <option value="5000" selected>5 km</option>
+              <option value="10000">10 km</option>
+              <option value="15000">15 km</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Custom Map Location Button (Paper Plane) -->
+        <button id="map-location-btn" class="map-location-btn" title="Tap to locate, long press to set manually" aria-label="My Location">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+
         <!-- Interactive Google Maps Canvas (Explicitly height sized to prevent CF2 error) -->
         <div id="map" class="map-canvas" aria-label="Interactive map showing your location and nearby emergency services"></div>
         
