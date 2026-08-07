@@ -473,6 +473,48 @@ const OSM_CATEGORY_MAP = {
 
 const overpassCache = new Map();
 
+// Session Cache for Google Places / OpenStreetMap searches
+const googlePlacesCache = {
+  // Key format: `${category}_${lat.toFixed(3)}_${lng.toFixed(3)}`
+  // Value format: { timestamp: Number, radius: Number, results: Array }
+  data: new Map(),
+
+  set(category, lat, lng, radius, results) {
+    const key = `${category}_${lat.toFixed(3)}_${lng.toFixed(3)}`;
+    this.data.set(key, {
+      timestamp: Date.now(),
+      radius: Number(radius),
+      results: results
+    });
+  },
+
+  get(category, lat, lng, targetRadius) {
+    const key = `${category}_${lat.toFixed(3)}_${lng.toFixed(3)}`;
+    const cached = this.data.get(key);
+    if (!cached) return null;
+
+    // Check expiration (5 minutes = 300,000 milliseconds)
+    const isExpired = Date.now() - cached.timestamp > 300000;
+    if (isExpired) {
+      this.data.delete(key);
+      return null;
+    }
+
+    // Smart Radius Rule: 
+    // We can reuse the cache if the cached radius is >= targetRadius.
+    // If targetRadius is larger, we need to query Google to find the new outer facilities.
+    if (cached.radius >= Number(targetRadius)) {
+      // Return a filtered copy containing only results within the target radius
+      return cached.results.filter(p => {
+        const dist = getApproxDistance({ lat, lng }, p.location);
+        return dist <= Number(targetRadius);
+      });
+    }
+
+    return null;
+  }
+};
+
 async function searchWithOverpassAPI(category, userLoc, radius) {
   try {
     const osmTags = OSM_CATEGORY_MAP[category];
@@ -824,6 +866,14 @@ async function performNearbySearch() {
   const category = state.currentCategory;
   const meta = CATEGORY_META[category] || { label: "Emergency" };
 
+  // 1. Check Google Places Session Cache first (Instant load)
+  const cachedResults = googlePlacesCache.get(category, state.userLocation.lat, state.userLocation.lng, state.searchRadius);
+  if (cachedResults) {
+    DOM.spinner.style.display = "none";
+    processAndRenderResults(cachedResults, category, searchId, true);
+    return;
+  }
+
   DOM.feedStatus.textContent = `Scanning for nearby ${meta.label}...`;
   DOM.spinner.style.display = "inline-block";
   DOM.placesFeed.innerHTML = "";
@@ -870,6 +920,8 @@ async function performNearbySearch() {
   // Strategy 2: Classic PlacesService
   if (!places || places.length === 0) {
     places = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius, (updatedPlaces) => {
+      // Save the pagination-updated list to the cache
+      googlePlacesCache.set(category, state.userLocation.lat, state.userLocation.lng, state.searchRadius, updatedPlaces);
       // Background callback to render additional pages (Page 2 & 3) dynamically
       processAndRenderResults(updatedPlaces, category, searchId, false);
     });
@@ -879,6 +931,9 @@ async function performNearbySearch() {
   if (!places || places.length === 0) {
     places = await searchWithOverpassAPI(category, state.userLocation, state.searchRadius);
   }
+
+  // Save initial results to the cache
+  googlePlacesCache.set(category, state.userLocation.lat, state.userLocation.lng, state.searchRadius, places);
 
   // Initial render of page 1 results
   processAndRenderResults(places, category, searchId, true);
