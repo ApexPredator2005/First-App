@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ResQNow - Live Emergency Radar</title>
+  <title>ResQNow Desktop - Immersive Map Production</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <link rel="stylesheet" href="index.css">
-  
   <script>
     tailwind.config = {
       theme: {
@@ -18,161 +17,145 @@
       }
     }
   </script>
-  <script>
-    // Map DOM Mover to handle responsive Map placement
-    document.addEventListener('DOMContentLoaded', () => {
-        const mapEl = document.getElementById('map');
-        const mobileContainer = document.getElementById('map-container-mobile');
-        const desktopContainer = document.getElementById('map-container-desktop');
-        
-        function moveMap() {
-            if (window.innerWidth < 768) {
-                if (mapEl.parentElement !== mobileContainer) {
-                    mobileContainer.insertBefore(mapEl, mobileContainer.firstChild);
-                }
-            } else {
-                if (mapEl.parentElement !== desktopContainer) {
-                    desktopContainer.insertBefore(mapEl, desktopContainer.firstChild);
-                }
-            }
-        }
-        
-        window.addEventListener('resize', moveMap);
-        moveMap();
-    });
-  </script>
 </head>
-<body class="min-h-screen pb-24 md:pb-0 text-gray-900 overflow-x-hidden antialiased bg-[#faf8f5] flex items-center justify-center">
-  <div class="pastel-glow"></div>
-
-  <!-- Desktop Wrapper (only applies on md+ screens) -->
-  <div class="md:flex md:gap-6 md:h-[85vh] md:max-w-[1300px] md:w-[95vw] md:mx-auto glass-container rounded-[2.5rem] overflow-hidden p-8">
+<body class="h-screen flex flex-col relative">
+  <div class="ambient-glow"></div>
   
-    <!-- Left Column (Controls & Feed) -->
-    <div class="md:w-[55%] shrink-0 flex flex-col md:h-full md:overflow-y-auto custom-scroll space-y-6 pr-2">
+  <!-- Header -->
+  <header class="glass-island sticky top-0 z-50 px-8 py-4 flex items-center justify-between mx-6 mt-6 rounded-2xl">
+    <div class="flex items-center gap-4">
+      <span class="material-symbols-outlined text-red-500 text-4xl">emergency_share</span>
+      <h1 class="text-3xl font-bold tracking-tight text-blue-900">ResQNow</h1>
+    </div>
+    <div class="flex items-center gap-4">
+      <div id="spinner" class="spinner bg-white/50 rounded-full w-8 h-8 flex items-center justify-center p-1 hidden"></div>
+      <span id="feed-status" class="text-xs text-gray-500 font-medium hidden"></span>
+      <button class="px-6 py-2.5 glass-island rounded-full text-sm font-bold text-blue-900 hover:bg-white transition-colors" onclick="document.getElementById('health-modal').showModal()">My Health Profile</button>
+      <button id="open-settings-btn" class="w-12 h-12 glass-island rounded-full flex items-center justify-center squadron-card">
+        <span class="material-symbols-outlined text-gray-600">settings</span>
+      </button>
+    </div>
+  </header>
+  
+  <main class="flex-1 relative p-6 grid grid-cols-12 gap-6 overflow-hidden pointer-events-none">
+    
+    <!-- Sidebar Controls -->
+    <aside class="col-span-3 flex flex-col space-y-6 z-10 overflow-y-auto custom-scroll pr-2 pointer-events-auto">
       
-      <!-- Top Bar -->
-      <header class="flex items-center justify-between pb-2">
-        <div class="flex items-center gap-3">
+      <div class="glass-island px-6 py-3 rounded-2xl text-sm font-bold text-gray-600 flex items-center justify-between squadron-card">
+        Search Radius: 
+        <select id="radius-select" class="bg-transparent border-none outline-none text-blue-600 font-bold cursor-pointer">
+          <option value="2000">2 km</option>
+          <option value="5000" selected>5 km</option>
+          <option value="10000">10 km</option>
+          <option value="15000">15 km</option>
+        </select>
+      </div>
+
+      <!-- Squadrons Grid -->
+      <section>
+        <h2 class="text-lg font-bold mb-4 text-blue-900/60 uppercase tracking-widest text-xs">Emergency Squadrons</h2>
+        <div class="grid grid-cols-2 gap-4 category-pills">
+          <!-- Hospitals -->
+          <button class="pill squadron-card glass-island p-5 rounded-3xl bg-[#ff9999]/20 border-[#ff9999]/30 text-left cursor-pointer" data-category="hospital">
+            <div class="flex justify-between items-start mb-6">
+              <span class="text-sm font-bold text-red-600">Hospitals</span>
+              <span class="material-symbols-outlined text-red-500">local_hospital</span>
+            </div>
+            <div class="text-4xl font-bold text-red-900" id="count-hospital">0</div>
+          </button>
           
-    <svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="birdGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#ff7e5f" />
-          <stop offset="100%" stop-color="#feb47b" />
-        </linearGradient>
-        <linearGradient id="birdDarkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#3a1c71" />
-          <stop offset="100%" stop-color="#d76d77" />
-        </linearGradient>
-      </defs>
-      <path d="M 20 60 C 20 60 40 40 70 50 C 70 50 60 70 40 80 C 40 80 20 70 20 60 Z" fill="url(#birdDarkGrad)"/>
-      <path d="M 30 70 C 30 70 10 50 20 30 C 20 30 40 20 60 30 C 60 30 50 60 30 70 Z" fill="url(#birdGrad)"/>
-      <path d="M 10 40 C 10 40 30 10 50 10 C 50 10 40 30 20 50 C 20 50 5 45 10 40 Z" fill="rgba(255,100,100,0.8)"/>
-      <g transform="translate(60, 10)">
-        <circle cx="15" cy="15" r="12" fill="white" stroke="#ff4d4d" stroke-width="2"/>
-        <path d="M 15 7 L 15 23 M 7 15 L 23 15" stroke="#ff4d4d" stroke-width="4" stroke-linecap="round"/>
-      </g>
-    </svg>
-    
-          <h1 class="text-2xl font-bold tracking-tight text-blue-900">ResQNow</h1>
-        </div>
-        
-        <div class="flex items-center gap-3">
-          <button id="open-settings-btn" class="w-10 h-10 rounded-full glass-card border border-white/40 flex items-center justify-center hover:bg-white/50 transition shadow-sm">
-            <span class="material-symbols-outlined text-gray-600 text-xl">settings</span>
+          <!-- Police -->
+          <button class="pill squadron-card glass-island p-5 rounded-3xl bg-[#7fb3ff]/20 border-[#7fb3ff]/30 text-left cursor-pointer" data-category="police">
+            <div class="flex justify-between items-start mb-6">
+              <span class="text-sm font-bold text-blue-600">Police</span>
+              <span class="material-symbols-outlined text-blue-500">local_police</span>
+            </div>
+            <div class="text-4xl font-bold text-blue-900" id="count-police">0</div>
           </button>
-          <button class="px-4 py-2 rounded-full glass-card border border-white/40 text-sm font-bold text-gray-800 hover:bg-white/50 transition shadow-sm" onclick="document.getElementById('health-modal').showModal()">
-            My Health Profile
+
+          <!-- Fire Stations -->
+          <button class="pill squadron-card glass-island p-5 rounded-3xl bg-[#ff7f7f]/20 border-[#ff7f7f]/30 text-left cursor-pointer" data-category="fire_station">
+            <div class="flex justify-between items-start mb-6">
+              <span class="text-sm font-bold text-red-600">Fire Stations</span>
+              <span class="material-symbols-outlined text-red-500">fire_truck</span>
+            </div>
+            <div class="text-4xl font-bold text-red-900" id="count-fire_station">0</div>
+          </button>
+
+          <!-- Pharmacies -->
+          <button class="pill squadron-card glass-island p-5 rounded-3xl bg-[#ffdf7f]/20 border-[#ffdf7f]/30 text-left cursor-pointer" data-category="pharmacy">
+            <div class="flex justify-between items-start mb-6">
+              <span class="text-sm font-bold text-yellow-600">Pharmacies</span>
+              <span class="material-symbols-outlined text-yellow-500">vaccines</span>
+            </div>
+            <div class="text-4xl font-bold text-yellow-900" id="count-pharmacy">0</div>
+          </button>
+
+          <!-- Vet Clinics -->
+          <button class="pill squadron-card glass-island p-5 rounded-3xl bg-[#df7fff]/20 border-[#df7fff]/30 text-left cursor-pointer" data-category="veterinary_care">
+            <div class="flex justify-between items-start mb-6">
+              <span class="text-sm font-bold text-purple-600">Vet Clinics</span>
+              <span class="material-symbols-outlined text-purple-500">pets</span>
+            </div>
+            <div class="text-4xl font-bold text-purple-900" id="count-veterinary_care">0</div>
+          </button>
+
+          <!-- Blood Banks -->
+          <button class="pill squadron-card glass-island p-5 rounded-3xl bg-[#ff7fb3]/20 border-[#ff7fb3]/30 text-left cursor-pointer" data-category="blood_bank">
+            <div class="flex justify-between items-start mb-6">
+              <span class="text-sm font-bold text-pink-600">Blood Banks</span>
+              <span class="material-symbols-outlined text-pink-500">bloodtype</span>
+            </div>
+            <div class="text-4xl font-bold text-pink-900" id="count-blood_bank">0</div>
           </button>
         </div>
-    
-      </header>
+      </section>
 
-      <main class="px-6 py-2 md:px-0 space-y-6 flex-1">
-        
-        <!-- Search Radius -->
-        <section class="flex items-center gap-2 mb-6">
-          <div class="glass-card px-4 py-2 rounded-full text-sm font-semibold text-gray-600 flex items-center gap-2 bg-white/80 shadow-sm border-white/60">
-            Search Radius: 
-            <select id="radius-select" class="bg-transparent border-none outline-none text-blue-600 font-bold cursor-pointer">
-              <option value="2000">2 km</option>
-              <option value="5000" selected>5 km</option>
-              <option value="10000">10 km</option>
-              <option value="15000">15 km</option>
-            </select>
+      <!-- Results Section -->
+      <section class="glass-island p-6 rounded-3xl">
+        <h2 class="text-lg font-bold mb-4">Results</h2>
+        <div class="space-y-4" id="places-feed">
+          <div class="p-4 rounded-2xl bg-white/40 border border-white/60 text-center text-sm text-gray-500">
+             Scanning surrounding coordinates... Select a category above to view immediate response units.
           </div>
-          <span id="feed-status" class="text-xs text-gray-400 font-medium ml-2">Awaiting radar...</span>
-          <div id="spinner" class="spinner ml-2 hidden"></div>
-        </section>
-    
-        <!-- Emergency Squadrons Grid -->
-        <section>
-          <h2 class="text-lg font-bold mb-3">Emergency Squadrons</h2>
-          <div class="grid grid-cols-2 gap-3 category-pills">
-            
-            <button class="pill pill-hospital active squadron-card glass-card p-3 rounded-xl bg-red-50/50 border-red-100 text-left relative overflow-hidden" data-category="hospital">
-              <div class="flex justify-between items-start mb-2 relative z-10">
-                <span class="text-xs font-semibold text-red-600 pill-label">Hospitals</span>
-                <span class="material-symbols-outlined text-red-500 text-sm">local_hospital</span>
-              </div>
-              <div class="text-2xl font-bold text-red-900 relative z-10 pill-count" id="count-hospital">0</div>
-            </button>
-            
-            <button class="pill pill-police squadron-card glass-card p-3 rounded-xl bg-blue-50/50 border-blue-100 text-left relative overflow-hidden" data-category="police">
-              <div class="flex justify-between items-start mb-2 relative z-10">
-                <span class="text-xs font-semibold text-blue-600 pill-label">Police</span>
-                <span class="material-symbols-outlined text-blue-500 text-sm">local_police</span>
-              </div>
-              <div class="text-2xl font-bold text-blue-900 relative z-10 pill-count" id="count-police">0</div>
-            </button>
-            
-            <button class="pill pill-fire squadron-card glass-card p-3 rounded-xl bg-orange-50/50 border-orange-100 text-left relative overflow-hidden" data-category="fire_station">
-              <div class="flex justify-between items-start mb-2 relative z-10">
-                <span class="text-xs font-semibold text-orange-600 pill-label">Fire Stations</span>
-                <span class="material-symbols-outlined text-orange-500 text-sm">fire_truck</span>
-              </div>
-              <div class="text-2xl font-bold text-orange-900 relative z-10 pill-count" id="count-fire_station">0</div>
-            </button>
-            
-            <button class="pill pill-pharmacy squadron-card glass-card p-3 rounded-xl bg-green-50/50 border-green-100 text-left relative overflow-hidden" data-category="pharmacy">
-              <div class="flex justify-between items-start mb-2 relative z-10">
-                <span class="text-xs font-semibold text-green-600 pill-label">Pharmacies</span>
-                <span class="material-symbols-outlined text-green-500 text-sm">vaccines</span>
-              </div>
-              <div class="text-2xl font-bold text-green-900 relative z-10 pill-count" id="count-pharmacy">0</div>
-            </button>
-            
-            <button class="pill pill-vet squadron-card glass-card p-3 rounded-xl bg-purple-50/50 border-purple-100 text-left relative overflow-hidden" data-category="veterinary_care">
-              <div class="flex justify-between items-start mb-2 relative z-10">
-                <span class="text-xs font-semibold text-purple-600 pill-label">Vet Clinics</span>
-                <span class="material-symbols-outlined text-purple-500 text-sm">pets</span>
-              </div>
-              <div class="text-2xl font-bold text-purple-900 relative z-10 pill-count" id="count-veterinary_care">0</div>
-            </button>
-            
-            <button class="pill pill-blood squadron-card glass-card p-3 rounded-xl bg-rose-50/50 border-rose-100 text-left relative overflow-hidden" data-category="blood_bank">
-              <div class="flex justify-between items-start mb-2 relative z-10">
-                <span class="text-xs font-semibold text-rose-600 pill-label">Blood Banks</span>
-                <span class="material-symbols-outlined text-rose-500 text-sm">bloodtype</span>
-              </div>
-              <div class="text-2xl font-bold text-rose-900 relative z-10 pill-count" id="count-blood_bank">0</div>
-            </button>
+        </div>
+      </section>
 
+      <!-- Emergency Helplines -->
+      <section>
+        <h2 class="text-lg font-bold mb-4 text-gray-800">Emergency Helplines (India)</h2>
+        <div class="space-y-3">
+          <div class="glass-island px-5 py-3 rounded-2xl flex justify-between items-center bg-white/80">
+            <span class="text-sm text-gray-600">Police</span>
+            <span class="font-bold text-gray-900">100</span>
           </div>
-        </section>
+          <div class="glass-island px-5 py-3 rounded-2xl flex justify-between items-center bg-white/80">
+            <span class="text-sm text-gray-600">Fire Dept</span>
+            <span class="font-bold text-gray-900">101</span>
+          </div>
+          <div class="glass-island px-5 py-3 rounded-2xl flex justify-between items-center bg-white/80">
+            <span class="text-sm text-gray-600">Ambulance</span>
+            <span class="font-bold text-gray-900">102</span>
+          </div>
+        </div>
+      </section>
 
-        <!-- Map Section for MOBILE ONLY (Hidden on md+) -->
-        <!-- In mobile layout, we want the map above the results, just like the mockup -->
-        <section class="h-40 rounded-3xl overflow-hidden glass-card relative md:hidden border border-white/50 shadow-xl" id="map-container-mobile">
-           <!-- Map Location Control -->
-           <div class="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
-             <button id="map-location-btn" class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center text-blue-600 shadow-lg hover:bg-white/70 active:scale-95 transition">
-               <span class="material-symbols-outlined">my_location</span>
-             </button>
-           </div>
-           
-           <div id="route-hud" class="route-hud hidden absolute top-2 left-2 right-2 bg-white/90 backdrop-blur-md rounded-2xl p-3 shadow-lg z-20">
+    </aside>
+    
+    <div class="col-span-9 glass-island rounded-[40px] relative overflow-hidden pointer-events-auto shadow-inner" id="map-container-desktop">
+      <div class="absolute inset-0 bg-blue-50/30 pointer-events-none z-10"></div>
+      <div id="map" class="absolute inset-0 z-0"></div>
+      
+      <!-- Right Floating Map Controls -->
+      <div class="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col gap-4 z-20">
+        <button id="map-location-btn" class="w-14 h-14 glass-island rounded-2xl flex items-center justify-center text-blue-600 squadron-card mt-4 shadow-lg hover:bg-white transition">
+          <span class="material-symbols-outlined">my_location</span>
+        </button>
+      </div>
+      
+      <!-- Route HUD -->
+      <div id="route-hud" class="route-hud hidden absolute top-2 left-2 right-2 bg-white/90 backdrop-blur-md rounded-2xl p-3 shadow-lg z-20">
               <div class="flex justify-between items-center mb-2">
                  <div class="font-bold text-blue-600 flex items-center gap-1"><span class="material-symbols-outlined text-sm">navigation</span> Route</div>
                  <button id="close-hud-btn" class="text-gray-500 hover:text-red-500">&times;</button>
@@ -212,53 +195,9 @@
                
                   <div id="spinner" class="spinner hidden bg-white/50 rounded-full w-8 h-8 flex items-center justify-center p-1"></div>
                </div>
-    
-               
-               <!-- Map Location Control -->
-               <div class="absolute bottom-6 right-6 flex flex-col gap-2 z-10 md:bottom-6 md:right-6">
-                 <button id="map-location-btn" class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center text-blue-600 shadow-lg hover:bg-white/70 active:scale-95 transition">
-                   <span class="material-symbols-outlined">my_location</span>
-                 </button>
-               </div>
-               
-               <div id="route-hud" class="route-hud hidden absolute top-4 left-4 right-4 md:right-auto md:w-72 bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-xl z-20">
-                  <div class="flex justify-between items-center mb-3 border-b pb-2">
-                     <div class="font-bold text-blue-600 flex items-center gap-1"><span class="material-symbols-outlined text-sm">navigation</span> Live Route</div>
-                     <button id="close-hud-btn" class="text-gray-500 hover:text-red-500 text-xl font-bold">&times;</button>
-                  </div>
-                  <div class="space-y-2 text-sm">
-                    <div class="flex justify-between"><span class="text-gray-500">Est. Time</span><span id="route-duration" class="font-bold text-gray-900">-- min</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500">Distance</span><span id="route-distance" class="font-bold text-gray-900">-- km</span></div>
-                    <p id="route-summary" class="text-xs text-gray-400 mt-2 hidden">Route calculated.</p>
-                  </div>
-               </div>
-           </div>
-       </section>
     </div>
-
-  </div>
-
-  <!-- Bottom Navigation (Mobile Only) -->
-  <nav class="md:hidden fixed bottom-0 left-0 w-full glass-card border-t border-white/20 px-6 py-3 flex justify-between items-center z-50 rounded-t-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.05)]">
-    <button id="nav-locator-btn" class="flex flex-col items-center gap-1 text-blue-600">
-      <span class="material-symbols-outlined font-fill">location_on</span>
-      <span class="text-[10px] font-bold">Locator</span>
-    </button>
-    <button id="nav-alerts-btn" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600">
-      <span class="material-symbols-outlined">notifications</span>
-      <span class="text-[10px] font-bold">Alerts</span>
-    </button>
-    <button id="nav-helplines-btn" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600">
-      <span class="material-symbols-outlined">call</span>
-      <span class="text-[10px] font-bold">Helplines</span>
-    </button>
-    <button id="open-health-btn-mobile" class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600" onclick="document.getElementById('health-modal').showModal()">
-      <span class="material-symbols-outlined">account_circle</span>
-      <span class="text-[10px] font-bold">Profile</span>
-    </button>
-  </nav>
-
-  <!-- Modals & Scripts -->
+  </main>
+  
   <dialog id="sos-modal" class="glass-modal">
     <div class="modal-content sos-modal-content">
       <header class="modal-header">
@@ -279,10 +218,7 @@
       </footer>
     </div>
   </dialog>
-
-  
-
-  <dialog id="place-modal" class="glass-modal">
+<dialog id="place-modal" class="glass-modal">
     <div class="modal-content place-details-content">
       <header class="modal-header">
         <h2 id="modal-place-name">Facility Name</h2>
@@ -305,8 +241,7 @@
       </footer>
     </div>
   </dialog>
-
-  <dialog id="location-modal" class="glass-modal">
+<dialog id="location-modal" class="glass-modal">
     <div class="modal-content">
       <header class="modal-header">
         <h2>📍 Set Custom Scan Epicenter</h2>
@@ -339,8 +274,7 @@
       </footer>
     </div>
   </dialog>
-
-  <dialog id="settings-modal" class="glass-modal">
+<dialog id="settings-modal" class="glass-modal">
     <div class="modal-content settings-content">
       <header class="modal-header">
         <h2>🔑 Google Maps Platform Configuration</h2>
@@ -377,8 +311,7 @@
       </footer>
     </div>
   </dialog>
-
-  <dialog id="health-modal" class="glass-modal">
+<dialog id="health-modal" class="glass-modal">
     <div class="modal-content health-modal-content">
       <header class="modal-header">
         <div class="modal-title-wrap">
@@ -576,11 +509,7 @@
       </div>
     </div>
   </dialog>
-
-  
-  
-  
-  <!-- Hidden elements to prevent app.js from crashing -->
+<!-- Hidden elements to prevent app.js from crashing -->
   <div id="coordinates-display" class="hidden"></div>
   <button id="rescan-btn" class="hidden"></button>
   <button id="open-location-modal-btn" class="hidden"></button>
@@ -600,5 +529,6 @@
   <div id="offline-banner" class="hidden"></div>
   
   <script src="app.js"></script>
+  
 </body>
 </html>

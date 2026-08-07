@@ -965,10 +965,9 @@ function renderPlaceCard(place, index) {
   if (isOpen === false) statusHTML = `<span class="badge-status badge-closed">🔴 Closed</span>`;
 
   const li = document.createElement("li");
-  li.className = "place-card animate-in";
+  li.className = "p-4 rounded-2xl bg-white/40 border border-white/60 mb-4 cursor-pointer hover:bg-white/60 transition-colors animate-in";
   li.setAttribute("data-type", state.currentCategory);
   li.style.animationDelay = `${Math.min(index * 70, 420)}ms`;
-  const phoneNum = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
 
   let placeName = "Emergency Unit";
   if (typeof place.displayName === "string") {
@@ -979,31 +978,25 @@ function renderPlaceCard(place, index) {
     placeName = place.name;
   }
 
+  const phoneNum = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
+  const contactLinks = [];
+  if (phoneNum) contactLinks.push(`<a href="tel:${phoneNum}" class="text-blue-600 font-medium hover:underline" onclick="event.stopPropagation();">📞 ${phoneNum}</a>`);
+  if (place.websiteURI) contactLinks.push(`<a href="${place.websiteURI}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 font-medium hover:underline" onclick="event.stopPropagation();">🌐 Website</a>`);
+
   li.innerHTML = `
-    <div class="card-top">
-      <h3>${placeName}</h3>
-      ${statusHTML}
+    <div class="flex justify-between items-start mb-1">
+      <h3 class="font-bold text-blue-900 truncate pr-2">${placeName}</h3>
+      <span class="text-xs font-semibold ${isOpen === true ? 'text-green-600' : (isOpen === false ? 'text-red-600' : 'text-gray-400')} whitespace-nowrap">
+        ${isOpen === true ? 'Open' : (isOpen === false ? 'Closed' : 'N/A')}
+      </span>
     </div>
-    <div class="card-body">
-      <p class="card-address">📫 ${place.formattedAddress || "Address not available"}</p>
+    <p class="text-xs text-gray-500 mb-1 truncate">${place.formattedAddress || "Address not available"}</p>
+    <div class="flex justify-between items-center text-xs text-gray-500 mb-3">
+      <span>${distKm} km away</span>
+      ${place.rating ? `<span class="flex items-center gap-1 font-medium text-yellow-600">⭐ ${place.rating}</span>` : ""}
     </div>
-    <div class="card-contact">
-      ${phoneNum ? `<a href="tel:${phoneNum}" class="contact-chip phone-chip" onclick="event.stopPropagation();" title="Call now">
-        <span>📞</span> ${phoneNum}
-      </a>` : ""}
-      ${place.websiteURI ? `<a href="${place.websiteURI}" target="_blank" rel="noopener noreferrer" class="contact-chip web-chip" onclick="event.stopPropagation();" title="Visit website">
-        <span>🌐</span> Website
-      </a>` : ""}
-    </div>
-    <div class="card-footer">
-      <div class="card-metrics">
-        <span class="dist-badge">📍 ${distKm} km away</span>
-        ${place.rating ? `<span class="rating-badge">⭐ ${place.rating} (${place.userRatingCount || 0})</span>` : ""}
-      </div>
-      <button class="btn btn-route" data-index="${index}" aria-label="Navigate to ${placeName}">
-        <span>⚡ Quick Route</span>
-      </button>
-    </div>
+    ${contactLinks.length > 0 ? `<div class="flex gap-3 text-xs mb-3 bg-white/30 p-2 rounded-lg">${contactLinks.join(' <span class="text-gray-300">|</span> ')}</div>` : ''}
+    <button class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold text-sm shadow-lg squadron-card btn-route" data-index="${index}">Quick Route</button>
   `;
 
   // Click card to zoom and open details modal

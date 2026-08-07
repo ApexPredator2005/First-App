@@ -1,190 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Tailwind takes over most layout, these are custom components */
-.glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+:root {
+  --surface: #f9f9fe;
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --shadow-soft: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
 }
+body {
+  font-family: 'Hanken Grotesk', sans-serif;
+  background-color: var(--surface);
+  color: #1a1a1e;
+  overflow: hidden;
+}
+/* Glassmorphism System */
+.glass-island {
+  background: var(--glass-bg);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-soft);
+}
+/* Hover & Active States */
 .squadron-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.squadron-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.1);
 }
 .squadron-card:active {
   transform: scale(0.95);
+  filter: brightness(0.95);
 }
-
-
-.pastel-glow {
+/* Background Gradient (Shader Fallback) */
+.ambient-glow {
   position: fixed;
-  width: 100vw;
-  height: 100vh;
-  top: 0;
-  left: 0;
+  inset: 0;
   z-index: -1;
   background: 
-    radial-gradient(circle at 15% 50%, rgba(255, 230, 230, 0.4) 0%, transparent 40%),
-    radial-gradient(circle at 85% 50%, rgba(255, 240, 230, 0.4) 0%, transparent 40%),
-    radial-gradient(circle at 50% 10%, rgba(255, 245, 240, 0.6) 0%, transparent 40%),
-    #fdfbf7;
+    radial-gradient(circle at 10% 20%, rgba(255, 182, 193, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 80% 10%, rgba(173, 216, 230, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 50% 90%, rgba(255, 218, 185, 0.15) 0%, transparent 40%);
 }
-.glass-container {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
-}
-
-/* Pill Gradients */
-.pill-hospital { background: linear-gradient(135deg, #ffc0cb 0%, #ffb6c1 100%); border-color: transparent; }
-.pill-hospital .pill-label, .pill-hospital .pill-count, .pill-hospital .material-symbols-outlined { color: #8e1c31; }
-.pill-police { background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%); border-color: transparent; }
-.pill-police .pill-label, .pill-police .pill-count, .pill-police .material-symbols-outlined { color: #1a4f8b; }
-.pill-fire_station { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-color: transparent; }
-.pill-fire_station .pill-label, .pill-fire_station .pill-count, .pill-fire_station .material-symbols-outlined { color: #d35400; }
-.pill-pharmacy { background: linear-gradient(135deg, #ffcc80 0%, #ffb74d 100%); border-color: transparent; }
-.pill-pharmacy .pill-label, .pill-pharmacy .pill-count, .pill-pharmacy .material-symbols-outlined { color: #8a4a00; }
-.pill-veterinary_care { background: linear-gradient(135deg, #e1bee7 0%, #ce93d8 100%); border-color: transparent; }
-.pill-veterinary_care .pill-label, .pill-veterinary_care .pill-count, .pill-veterinary_care .material-symbols-outlined { color: #4a148c; }
-.pill-blood_bank { background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%); border-color: transparent; }
-.pill-blood_bank .pill-label, .pill-blood_bank .pill-count, .pill-blood_bank .material-symbols-outlined { color: #b71c1c; }
-/* Custom Scrollbar for left panel */
-.custom-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-.custom-scroll::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.02); 
-  border-radius: 10px;
-}
-.custom-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.15); 
-  border-radius: 10px;
-}
-.custom-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(0,0,0,0.25); 
-}
-/* Hide scrollbars */
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Modals and specific non-Tailwind overrides */
-
-/* --- Map & Custom Overlays --- */
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(0, 122, 255, 0.2);
-  border-top-color: var(--accent-cyan, #007aff);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-@keyframes spin { 100% { transform: rotate(360deg); } }
-
-/* Modals */
-.glass-modal {
-  border: none;
-  background: transparent;
-  padding: 0;
-  margin: auto;
-  max-width: 90vw;
-  width: 500px;
-}
-.glass-modal::backdrop {
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-}
-.modal-content {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(40px) saturate(1.8);
-  border-radius: 24px;
-  border: 1px solid rgba(255,255,255,0.5);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-.modal-header {
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.modal-body {
-  padding: 1.5rem;
-  overflow-y: auto;
-  max-height: 60vh;
-}
-.modal-footer {
-  padding: 1.25rem 1.5rem;
-  border-top: 1px solid rgba(0,0,0,0.05);
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-}
-.btn-close {
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #666;
-}
-.form-group { margin-bottom: 1rem; }
-.form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; }
-.input-group { display: flex; gap: 0.5rem; }
-.input-group input { 
-  flex: 1; 
-  padding: 0.75rem; 
-  border-radius: 12px; 
-  border: 1px solid rgba(0,0,0,0.1); 
-  background: rgba(255,255,255,0.5); 
-}
-.btn-primary {
-  background: #007aff;
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn-secondary {
-  background: rgba(0,0,0,0.05);
-  color: #333;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-}
-.hidden { display: none !important; }
-
-/* Health Nav Tabs */
-.health-nav-tabs {
-  display: flex;
-  gap: 0.5rem;
-  padding: 0.5rem 1.5rem;
-  background: rgba(0,0,0,0.02);
-  overflow-x: auto;
-}
-.health-tab-btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  background: transparent;
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.health-tab-btn.active {
-  background: white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-.health-tab-pane { display: none; }
-.health-tab-pane.active { display: block; }
+/* Custom Scrollbar */
+.custom-scroll::-webkit-scrollbar { width: 6px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
