@@ -36,12 +36,12 @@ const state = {
 };
 
 const CATEGORY_META = {
-  hospital: { label: "Hospitals", singular: "Hospital", icon: "🏥", color: "#ff3366", searchTerms: "hospital OR trauma center OR trauma centre OR emergency room OR urgent care" },
+  hospital: { label: "Hospitals", singular: "Hospital", icon: "🏥", color: "#ff3366", searchTerms: "hospital" },
   police: { label: "Police Stations", singular: "Police Station", icon: "🚓", color: "#3b82f6", searchTerms: "police station" },
-  fire_station: { label: "Fire Stations", singular: "Fire Station", icon: "🚒", color: "#ff6a00", searchTerms: "fire station OR fire department OR fire rescue OR fire engine station" },
-  pharmacy: { label: "24/7 Pharmacies", singular: "Pharmacy", icon: "💊", color: "#10b981", searchTerms: "pharmacy OR medical store OR drugstore OR chemist OR drug store" },
-  veterinary_care: { label: "Veterinary Clinics", singular: "Vet Clinic", icon: "🐾", color: "#a855f7", searchTerms: "veterinary OR pet hospital OR animal hospital OR vet clinic" },
-  blood_bank: { label: "Blood Banks", singular: "Blood Bank", icon: "🩸", color: "#ef4444", searchTerms: "blood bank OR blood center OR blood centre OR blood donor center OR blood donor centre OR plasma center OR plasma centre OR plasma donation center OR plasma donation centre OR red cross blood donation OR bloodbank" }
+  fire_station: { label: "Fire Stations", singular: "Fire Station", icon: "🚒", color: "#ff6a00", searchTerms: "fire station" },
+  pharmacy: { label: "24/7 Pharmacies", singular: "Pharmacy", icon: "💊", color: "#10b981", searchTerms: "pharmacy" },
+  veterinary_care: { label: "Veterinary Clinics", singular: "Vet Clinic", icon: "🐾", color: "#a855f7", searchTerms: "veterinary clinic" },
+  blood_bank: { label: "Blood Banks", singular: "Blood Bank", icon: "🩸", color: "#ef4444", searchTerms: "blood bank" }
 };
 
 // Default Safe Urban Fallback (if GPS permission denied or testing headless)
