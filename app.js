@@ -8,6 +8,8 @@
 // Native Standalone Script Loader for Maximum Safari & GitHub Pages Reliability
 
 // Global App State
+const routeCache = new Map();
+
 const state = {
   userLocation: null,      // { lat, lng }
   currentCategory: "hospital", // 'hospital' | 'police' | 'fire_station' | 'pharmacy'
@@ -16,6 +18,7 @@ const state = {
   loader: null,
   libraries: {},           // Holds loaded maps, places, routes, markers libs
   placeMarkers: [],        // Active AdvancedMarkerElement instances on map
+  markerClusterer: null,   // Holds the MarkerClusterer instance
   currentRoutePolyline: null,
   apiKey: "",
   mapId: "DEMO_MAP_ID",    // Mandatory for AdvancedMarkerElement (CF9)
@@ -847,10 +850,21 @@ function processAndRenderResults(places, category, searchId, fitBounds = true) {
   DOM.feedStatus.textContent = `Located ${state.placesList.length} verified ${meta.label.toLowerCase()} nearby`;
 
   // Render cards and map pins
+  const markers = [];
   state.placesList.forEach((place, index) => {
     renderPlaceCard(place, index);
-    renderPlaceMarker(place, index);
+    markers.push(renderPlaceMarker(place, index));
   });
+
+  // Apply MarkerClusterer
+  if (window.markerClusterer && window.markerClusterer.MarkerClusterer) {
+    if (!state.markerClusterer) {
+      state.markerClusterer = new window.markerClusterer.MarkerClusterer({ map: state.map });
+    }
+    state.markerClusterer.addMarkers(markers);
+  } else {
+    markers.forEach(m => { m.map = state.map; });
+  }
 
   // Auto-fit map viewport if markers exist
   if (fitBounds) {
@@ -1013,7 +1027,6 @@ function renderPlaceMarker(place, index) {
   badge.innerHTML = `<span class="marker-icon">${meta.icon}</span><div class="marker-pulse"></div>`;
 
   const marker = new AdvancedMarkerElement({
-    map: state.map,
     position: place.location,
     title: place.displayName,
     content: badge,
@@ -1030,10 +1043,15 @@ function renderPlaceMarker(place, index) {
   marker.element.addEventListener("click", clickHandler);
 
   state.placeMarkers.push(marker);
+  return marker;
 }
 
 function clearPlaceMarkers() {
-  state.placeMarkers.forEach(marker => { marker.map = null; });
+  if (state.markerClusterer) {
+    state.markerClusterer.clearMarkers();
+  } else {
+    state.placeMarkers.forEach(marker => { marker.map = null; });
+  }
   state.placeMarkers = [];
   if (state.currentRoutePolyline) {
     state.currentRoutePolyline.setMap(null);
@@ -1127,7 +1145,14 @@ async function calculateAndRenderRoute(place) {
       provideRouteAlternatives: false // We want the single shortest route
     };
 
-    const response = await state.directionsService.route(request);
+    let response;
+    if (routeCache.has(place.id)) {
+      response = routeCache.get(place.id);
+    } else {
+      response = await state.directionsService.route(request);
+      routeCache.set(place.id, response);
+    }
+    
     state.directionsRenderer.setDirections(response);
 
     if (response && response.routes && response.routes.length > 0) {
