@@ -146,7 +146,8 @@ function loadGoogleMapsScript(apiKey) {
     }
 
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker,routes&v=weekly`;
+    const keyParam = (apiKey && apiKey !== "DEMO_KEY") ? `key=${apiKey}&` : "";
+    script.src = `https://maps.googleapis.com/maps/api/js?${keyParam}libraries=places,marker,routes&v=weekly`;
     script.async = true;
     script.defer = true;
     script.onload = () => {
@@ -183,15 +184,15 @@ async function initializeAppEngine() {
       await loadGoogleMapsScript(state.apiKey);
     }
 
-    // 2. Acquire User GPS Geolocation
-    await detectUserLocation();
-
-    // 3. Render Map Stage if Google Maps SDK is ready
+    // 2. Render Map Stage if Google Maps SDK is ready (Render immediately before waiting for GPS)
     if (window.google && window.google.maps) {
       try { renderMap(); } catch(e) { console.warn("Map render notice:", e); }
     } else {
       DOM.feedStatus.textContent = "Emergency Demo Mode Active";
     }
+
+    // 3. Acquire User GPS Geolocation
+    await detectUserLocation();
 
     // 4. Perform Initial Proximity Scan (Renders 20 emergency units per category)
     await performNearbySearch();
