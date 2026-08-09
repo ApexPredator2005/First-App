@@ -246,6 +246,39 @@ html, body {
   100% { transform: scale(0.95); opacity: 0; }
 }
 
+/* Black Flowing Pulse Ring around SOS Button */
+.sos-flowing-ring {
+  position: relative;
+}
+.sos-flowing-ring::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(0, 0, 0, 0.85);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+  animation: blackFlowingPulse 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes blackFlowingPulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.9;
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.6);
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.35;
+    box-shadow: 0 0 14px 4px rgba(0, 0, 0, 0.25);
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
 /* Animations */
 .animate-fade-in-up {
   animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;

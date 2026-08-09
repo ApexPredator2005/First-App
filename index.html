@@ -60,6 +60,12 @@
         </div>
       </div>
 
+      <!-- Motivational Health Quotes Display in Top Bar -->
+      <div class="hidden xl:flex items-center gap-2 max-w-md px-3.5 py-1 rounded-full bg-white/60 border border-white/70 text-xs text-slate-700 shadow-sm mx-auto">
+        <span class="text-amber-500 text-sm shrink-0">💡</span>
+        <span id="quote-text" class="font-medium italic text-slate-600 truncate transition-all duration-500">Loading motivational quote...</span>
+      </div>
+
       <div class="flex items-center gap-3">
         <div id="spinner" class="spinner hidden"></div>
         <span id="feed-status" class="text-xs font-medium text-slate-500 hidden md:inline-block"></span>
@@ -201,9 +207,9 @@
     <button id="map-location-btn" class="w-11 h-11 glass-panel rounded-2xl p-2.5 interactive-element shadow-lg border-white/60 hover:bg-white/80 text-slate-700 flex items-center justify-center" title="Center on My Location">
       <span class="material-symbols-outlined text-[20px]">near_me</span>
     </button>
-    <button id="sos-btn" class="w-16 h-16 rounded-full bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-bold text-xs shadow-2xl interactive-element flex flex-col items-center justify-center border-2 border-white/90" title="Trigger Emergency SOS Broadcast">
-      <span class="material-symbols-outlined text-xl mb-0.5">sos</span>
-      <span class="tracking-widest font-extrabold text-[11px]">SOS</span>
+    <button id="sos-btn" class="w-16 h-16 rounded-full bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-bold text-xs shadow-2xl interactive-element flex flex-col items-center justify-center border-2 border-white/90 sos-flowing-ring" title="Trigger Emergency SOS Broadcast">
+      <span class="material-symbols-outlined text-[20px] mb-0.5">emergency</span>
+      <span class="tracking-widest font-extrabold text-[11px] leading-none">SOS</span>
     </button>
   </div>
 
@@ -611,8 +617,6 @@
 
   <!-- Hidden mechanics elements -->
   <div id="turn-steps-box" class="hidden"></div>
-  <div id="turn-steps-list" class="hidden"></div>
-  <div id="quote-text" class="hidden"></div>
   <button id="sos-cancel-btn" class="hidden"></button>
   <div id="sos-status-bar" class="hidden"></div>
   <button id="start-nav-btn" class="hidden"></button>
