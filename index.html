@@ -83,6 +83,7 @@
   <!-- 2. SCROLLABLE LEFT SIDEBAR ISLAND (Compact Proportions for 100% Zoom) -->
   <aside id="sidebar-island" class="fixed top-14 left-0 bottom-0 w-full md:w-[360px] lg:w-[380px] overflow-y-auto custom-scroll z-20 p-3.5 md:p-4 pointer-events-none">
     <div class="pointer-events-auto flex flex-col gap-4 pb-20">
+      <div class="mobile-drawer-handle hidden md:hidden"></div>
       
       <!-- Search Radius Selector Tile -->
       <div class="glass-tile p-3 px-4 rounded-2xl flex items-center justify-between w-full interactive-element animate-fade-in-up stagger-1">
@@ -213,24 +214,24 @@
     </button>
   </div>
 
-  <!-- Mobile Bottom Nav Bar -->
-  <nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pt-2 glass-panel rounded-t-3xl pb-6 border-t border-white/50">
-    <a class="flex flex-col items-center justify-center text-primary rounded-full px-4 py-2 transition-all" href="#">
-      <span class="material-symbols-outlined mb-1 text-[22px]">location_on</span>
-      <span class="font-body text-[11px] font-medium">Locator</span>
-    </a>
-    <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-4 py-2" href="#" onclick="document.getElementById('health-modal').showModal(); return false;">
-      <span class="material-symbols-outlined mb-1 text-[22px]">favorite</span>
-      <span class="font-body text-[11px] font-medium">Health</span>
-    </a>
-    <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-4 py-2" href="#places-feed">
-      <span class="material-symbols-outlined mb-1 text-[22px]">list_alt</span>
-      <span class="font-body text-[11px] font-medium">Results</span>
-    </a>
-    <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-4 py-2" href="#" onclick="document.getElementById('settings-modal').showModal(); return false;">
-      <span class="material-symbols-outlined mb-1 text-[22px]">settings</span>
-      <span class="font-body text-[11px] font-medium">Settings</span>
-    </a>
+  <!-- Mobile Bottom Nav Bar (1-Thumb Mobile Touch Targets) -->
+  <nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 glass-panel rounded-t-3xl border-t border-white/50">
+    <button id="nav-tab-locator" class="flex flex-col items-center justify-center text-primary rounded-full px-3 py-1.5 transition-all outline-none">
+      <span class="material-symbols-outlined mb-0.5 text-[22px]">near_me</span>
+      <span class="font-body text-[10px] font-bold">Locator</span>
+    </button>
+    <button id="nav-tab-results" class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-3 py-1.5 outline-none">
+      <span class="material-symbols-outlined mb-0.5 text-[22px]">list_alt</span>
+      <span class="font-body text-[10px] font-bold">Results</span>
+    </button>
+    <button id="nav-tab-health" class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-3 py-1.5 outline-none">
+      <span class="material-symbols-outlined mb-0.5 text-[22px]">favorite</span>
+      <span class="font-body text-[10px] font-bold">Health</span>
+    </button>
+    <button id="nav-tab-settings" class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-3 py-1.5 outline-none">
+      <span class="material-symbols-outlined mb-0.5 text-[22px]">settings</span>
+      <span class="font-body text-[10px] font-bold">Settings</span>
+    </button>
   </nav>
 
   <!-- ============================================================================ -->

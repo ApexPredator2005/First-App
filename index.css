@@ -385,3 +385,108 @@ dialog[open] {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* ============================================================================ */
+/* MOBILE ADAPTIVE RESPONSIVE DESIGN (Screens <= 768px)                          */
+/* ============================================================================ */
+@media (max-width: 768px) {
+  /* 1. Full Screen Interactive Map Canvas */
+  #map {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 1 !important;
+  }
+
+  /* 2. Top Glass Header Bar - Compact Mobile Version */
+  header {
+    height: 52px !important;
+    padding: 0.35rem 0.85rem !important;
+  }
+
+  header h1 {
+    font-size: 1.1rem !important;
+  }
+
+  /* 3. Mobile Bottom Sheet Drawer */
+  #sidebar-island {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 58px !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-height: 44vh !important;
+    z-index: 35 !important;
+    padding: 0.65rem !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.85) 100%) !important;
+    backdrop-filter: blur(28px) saturate(1.8) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(1.8) !important;
+    border-radius: 28px 28px 20px 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.15) !important;
+    transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  /* Mobile Expanded Drawer Mode */
+  #sidebar-island.drawer-expanded {
+    max-height: 82vh !important;
+  }
+
+  /* Drag handle indicator at top of mobile bottom drawer */
+  .mobile-drawer-handle {
+    display: block !important;
+    width: 42px;
+    height: 4.5px;
+    background-color: rgba(148, 163, 184, 0.6);
+    border-radius: 9999px;
+    margin: 0 auto 0.5rem auto;
+  }
+
+  /* Category Pills on mobile - Horizontal Scroll Strip */
+  .category-pills .grid {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    gap: 0.5rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+
+  .category-pills button {
+    flex: 0 0 130px !important;
+    padding: 0.55rem 0.75rem !important;
+    scroll-snap-align: start;
+  }
+
+  /* 4. Floating Action Buttons (SOS & Location Arrow) */
+  .fixed.bottom-6.right-6 {
+    bottom: 74px !important;
+    right: 14px !important;
+    z-index: 40 !important;
+  }
+
+  #sos-btn {
+    width: 3.6rem !important;
+    height: 3.6rem !important;
+  }
+
+  /* 5. Mobile Bottom Tab Navigation Bar */
+  nav {
+    height: 58px !important;
+    padding-bottom: 0.25rem !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.98) 100%) !important;
+    backdrop-filter: blur(24px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  nav button {
+    padding: 0.25rem 0.75rem !important;
+  }
+
+  nav button span.material-symbols-outlined {
+    font-size: 20px !important;
+    margin-bottom: 2px !important;
+  }
+}

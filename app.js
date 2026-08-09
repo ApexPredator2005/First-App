@@ -1436,6 +1436,48 @@ function setupEventListeners() {
     });
   }
 
+  // ============================================================================
+  // Mobile Navigation Tabs & Bottom Sheet Drawer Controller
+  // ============================================================================
+  const sidebarIsland = document.getElementById("sidebar-island");
+  const navTabLocator = document.getElementById("nav-tab-locator");
+  const navTabResults = document.getElementById("nav-tab-results");
+  const navTabHealth = document.getElementById("nav-tab-health");
+  const navTabSettings = document.getElementById("nav-tab-settings");
+
+  if (navTabLocator) {
+    navTabLocator.addEventListener("click", async () => {
+      if (sidebarIsland) sidebarIsland.classList.remove("drawer-expanded");
+      await detectUserLocation();
+      if (state.map && state.userLocation) {
+        state.map.setCenter(state.userLocation);
+      }
+      performNearbySearch();
+    });
+  }
+
+  if (navTabResults && sidebarIsland) {
+    navTabResults.addEventListener("click", () => {
+      sidebarIsland.classList.toggle("drawer-expanded");
+      if (sidebarIsland.classList.contains("drawer-expanded")) {
+        sidebarIsland.scrollTop = 0;
+      }
+    });
+  }
+
+  if (navTabHealth) {
+    navTabHealth.addEventListener("click", () => {
+      const healthModal = document.getElementById("health-modal");
+      if (healthModal) healthModal.showModal();
+    });
+  }
+
+  if (navTabSettings) {
+    navTabSettings.addEventListener("click", () => {
+      if (DOM.settingsModal) DOM.settingsModal.showModal();
+    });
+  }
+
   // Location Modal Triggers & Custom Address Search
   if (DOM.openLocationModalBtn) {
     DOM.openLocationModalBtn.addEventListener("click", () => {
