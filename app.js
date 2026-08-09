@@ -183,11 +183,12 @@ async function initializeAppEngine() {
       await loadGoogleMapsScript(state.apiKey);
     }
 
-    // 2. Render Map Stage immediately if Google Maps SDK is ready
-    if (window.google && window.google.maps) {
+    // 2. Render Map Stage immediately (Google Maps if API key is present, otherwise Leaflet OpenStreetMap Engine)
+    if (window.google && window.google.maps && state.apiKey) {
       try { renderMap(); } catch(e) { console.warn("Map render notice:", e); }
     } else {
-      DOM.feedStatus.textContent = "Emergency Demo Mode Active";
+      DOM.feedStatus.textContent = "Emergency Radar Active (OpenStreetMap Engine)";
+      try { renderMap(); } catch(e) { console.warn("Leaflet Map render notice:", e); }
     }
 
     // 3. Acquire User GPS Geolocation
@@ -406,31 +407,100 @@ function updateUserMarker() {
 }
 
 // ============================================================================
-// Google Map Stage & Advanced Marker Setup
+// MAP STAGE RENDER ENGINE (Google Maps Vector / Leaflet OSM Fallback)
 // ============================================================================
 function renderMap() {
-  const { Map } = state.libraries.maps;
+  if (window.google && window.google.maps && window.google.maps.Map && state.apiKey) {
+    const { Map } = state.libraries.maps;
+    state.map = new Map(DOM.mapContainer, {
+      center: state.userLocation,
+      zoom: 13,
+      mapId: state.mapId,
+      disableDefaultUI: true,
+      zoomControl: false,
+      gestureHandling: "greedy"
+    });
 
-  // Ensure explicit height container to prevent CF2 map height collapse
-  state.map = new Map(DOM.mapContainer, {
-    center: state.userLocation,
-    zoom: 13,
-    mapId: state.mapId, // Mandatory for AdvancedMarkerElement (CF9)
-    disableDefaultUI: true,
-    zoomControl: false,
-    gestureHandling: "greedy"
+    updateUserMarker();
+
+    state.map.addListener("rightclick", (e) => {
+      if (e.latLng) {
+        const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        applyLocation(coords, `Map Pin: ${coords.lat.toFixed(3)}°, ${coords.lng.toFixed(3)}°`);
+        performNearbySearch();
+      }
+    });
+  } else if (window.L) {
+    renderLeafletMap();
+  }
+}
+
+function renderLeafletMap() {
+  if (!window.L) return;
+  const lat = state.userLocation ? state.userLocation.lat : 25.5941;
+  const lng = state.userLocation ? state.userLocation.lng : 85.1376;
+
+  if (state.leafletMap) {
+    state.leafletMap.setView([lat, lng], 13);
+    setTimeout(() => state.leafletMap.invalidateSize(), 300);
+    return;
+  }
+
+  DOM.mapContainer.innerHTML = `<div id="leaflet-canvas" class="w-full h-full" style="width:100%;height:100%;"></div>`;
+  state.leafletMap = L.map("leaflet-canvas", { zoomControl: false }).setView([lat, lng], 13);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(state.leafletMap);
+
+  updateLeafletUserMarker();
+  renderLeafletPlaceMarkers();
+}
+
+function updateLeafletUserMarker() {
+  if (!state.leafletMap || !window.L || !state.userLocation) return;
+  const lat = state.userLocation.lat;
+  const lng = state.userLocation.lng;
+
+  const userIcon = L.divIcon({
+    className: "custom-user-leaflet-marker",
+    html: `<div class="user-pulse-badge"><span class="user-pulse-dot"></span></div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
   });
 
-  // Render Draggable User Pulse Pin
-  updateUserMarker();
+  if (state.leafletUserMarker) {
+    state.leafletUserMarker.setLatLng([lat, lng]);
+  } else {
+    state.leafletUserMarker = L.marker([lat, lng], { icon: userIcon }).addTo(state.leafletMap);
+  }
+}
 
-  // Allow user to Right-Click anywhere on the map to set a new scan epicenter!
-  state.map.addListener("rightclick", (e) => {
-    if (e.latLng) {
-      const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-      applyLocation(coords, `Map Pin: ${coords.lat.toFixed(3)}°, ${coords.lng.toFixed(3)}°`);
-      performNearbySearch();
-    }
+function renderLeafletPlaceMarkers() {
+  if (!state.leafletMap || !window.L) return;
+
+  if (state.leafletMarkers) {
+    state.leafletMarkers.forEach(m => m.remove());
+  }
+  state.leafletMarkers = [];
+
+  const meta = CATEGORY_META[state.currentCategory] || { icon: "📍" };
+
+  state.placesList.forEach((place) => {
+    const pLat = typeof place.location.lat === 'function' ? place.location.lat() : place.location.lat;
+    const pLng = typeof place.location.lng === 'function' ? place.location.lng() : place.location.lng;
+
+    const markerIcon = L.divIcon({
+      className: `marker-badge marker-${state.currentCategory}`,
+      html: `<span class="marker-icon">${meta.icon}</span><div class="marker-pulse"></div>`,
+      iconSize: [48, 48],
+      iconAnchor: [24, 48]
+    });
+
+    const m = L.marker([pLat, pLng], { icon: markerIcon }).addTo(state.leafletMap);
+    m.on("click", () => openPlaceDetailsModal(place));
+    state.leafletMarkers.push(m);
   });
 }
 
