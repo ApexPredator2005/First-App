@@ -114,16 +114,7 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 }
 
 async function loadStoredSettings() {
-  let defaultKey = "AIzaSyB9GfTq1ZxVNIHWWni-Av4oTXX77Vy0VJo";
-
-  // Check localStorage for previously saved API key
-  let savedKey = localStorage.getItem("GMP_API_KEY");
-  if (!savedKey) {
-    savedKey = defaultKey;
-    if (defaultKey) {
-      localStorage.setItem("GMP_API_KEY", defaultKey);
-    }
-  }
+  let savedKey = localStorage.getItem("GMP_API_KEY") || "";
   const savedMapId = localStorage.getItem("GMP_MAP_ID") || "DEMO_MAP_ID";
   state.apiKey = savedKey;
   state.mapId = savedMapId;
@@ -131,15 +122,34 @@ async function loadStoredSettings() {
   if (DOM.mapIdInput) DOM.mapIdInput.value = savedMapId;
 }
 
+// Global Google Maps Auth Failure Handler (Triggers on domain restriction, quota error, or invalid key)
+window.gm_authFailure = function() {
+  console.warn("Google Maps API authentication failed (Domain restriction or Key issue). Auto-switching to OpenStreetMap Engine...");
+  state.googleMapsAuthFailed = true;
+  state.map = null;
+  if (DOM.mapContainer) {
+    DOM.mapContainer.innerHTML = "";
+  }
+  if (typeof renderLeafletMap === "function") {
+    renderLeafletMap();
+  }
+  if (typeof performNearbySearch === "function") {
+    performNearbySearch();
+  }
+  if (DOM.feedStatus) {
+    DOM.feedStatus.textContent = "Emergency Radar Active (OpenStreetMap Engine)";
+  }
+};
+
 function loadGoogleMapsScript(apiKey) {
   return new Promise((resolve) => {
-    if (window.google && window.google.maps) {
+    if (window.google && window.google.maps && !state.googleMapsAuthFailed) {
       populateLibraries();
       resolve(true);
       return;
     }
 
-    if (!apiKey) {
+    if (!apiKey || state.googleMapsAuthFailed) {
       resolve(false);
       return;
     }
@@ -155,6 +165,7 @@ function loadGoogleMapsScript(apiKey) {
     };
     script.onerror = () => {
       console.warn("Google Maps script failed to load or network restricted.");
+      state.googleMapsAuthFailed = true;
       resolve(false);
     };
     document.head.appendChild(script);
@@ -410,26 +421,32 @@ function updateUserMarker() {
 // MAP STAGE RENDER ENGINE (Google Maps Vector / Leaflet OSM Fallback)
 // ============================================================================
 function renderMap() {
-  if (window.google && window.google.maps && window.google.maps.Map && state.apiKey) {
-    const { Map } = state.libraries.maps;
-    state.map = new Map(DOM.mapContainer, {
-      center: state.userLocation,
-      zoom: 13,
-      mapId: state.mapId,
-      disableDefaultUI: true,
-      zoomControl: false,
-      gestureHandling: "greedy"
-    });
+  if (window.google && window.google.maps && window.google.maps.Map && state.apiKey && !state.googleMapsAuthFailed) {
+    try {
+      const { Map } = state.libraries.maps;
+      state.map = new Map(DOM.mapContainer, {
+        center: state.userLocation,
+        zoom: 13,
+        mapId: state.mapId,
+        disableDefaultUI: true,
+        zoomControl: false,
+        gestureHandling: "greedy"
+      });
 
-    updateUserMarker();
+      updateUserMarker();
 
-    state.map.addListener("rightclick", (e) => {
-      if (e.latLng) {
-        const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-        applyLocation(coords, `Map Pin: ${coords.lat.toFixed(3)}°, ${coords.lng.toFixed(3)}°`);
-        performNearbySearch();
-      }
-    });
+      state.map.addListener("rightclick", (e) => {
+        if (e.latLng) {
+          const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+          applyLocation(coords, `Map Pin: ${coords.lat.toFixed(3)}°, ${coords.lng.toFixed(3)}°`);
+          performNearbySearch();
+        }
+      });
+    } catch (e) {
+      console.warn("Google Maps init error, falling back to OpenStreetMap:", e);
+      state.googleMapsAuthFailed = true;
+      renderLeafletMap();
+    }
   } else if (window.L) {
     renderLeafletMap();
   }
