@@ -449,7 +449,27 @@ function renderLeafletMap() {
   DOM.mapContainer.innerHTML = `<div id="leaflet-canvas" class="w-full h-full" style="width:100%;height:100%;"></div>`;
   state.leafletMap = L.map("leaflet-canvas", { zoomControl: false }).setView([lat, lng], 13);
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  const OfflineTileLayer = L.TileLayer.extend({
+    createTile: function(coords, done) {
+      const tile = document.createElement("img");
+      const key = `tile_${coords.z}_${coords.x}_${coords.y}`;
+      getOfflineTile(key).then((blob) => {
+        if (blob) {
+          tile.src = URL.createObjectURL(blob);
+          done(null, tile);
+        } else {
+          tile.src = this.getTileUrl(coords);
+          done(null, tile);
+        }
+      }).catch(() => {
+        tile.src = this.getTileUrl(coords);
+        done(null, tile);
+      });
+      return tile;
+    }
+  });
+
+  new OfflineTileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap'
   }).addTo(state.leafletMap);
@@ -2574,4 +2594,187 @@ window.addEventListener("offline", () => {
   document.getElementById("offline-banner")?.classList.remove("hidden");
 });
 
-// Initialize SOS & Nav on load removed, as it's now in setupEventListeners.
+// ============================================================================
+// 15 KM OFFLINE EMERGENCY MAP DOWNLOADER ENGINE (IndexedDB Storage)
+// ============================================================================
+const OFFLINE_DB_NAME = "ResQNow_OfflineDB";
+const OFFLINE_DB_VERSION = 1;
+
+function openOfflineDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(OFFLINE_DB_NAME, OFFLINE_DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains("tiles")) {
+        db.createObjectStore("tiles");
+      }
+      if (!db.objectStoreNames.contains("meta")) {
+        db.createObjectStore("meta");
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveOfflineTile(key, blob) {
+  try {
+    const db = await openOfflineDB();
+    const tx = db.transaction("tiles", "readwrite");
+    tx.objectStore("tiles").put(blob, key);
+  } catch(e) { console.warn("Failed saving tile:", e); }
+}
+
+async function getOfflineTile(key) {
+  try {
+    const db = await openOfflineDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction("tiles", "readonly");
+      const req = tx.objectStore("tiles").get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+  } catch(e) { return null; }
+}
+
+async function saveOfflineMeta(data) {
+  try {
+    const db = await openOfflineDB();
+    const tx = db.transaction("meta", "readwrite");
+    tx.objectStore("meta").put(data, "offline_pack_info");
+  } catch(e) {}
+}
+
+async function getOfflineMeta() {
+  try {
+    const db = await openOfflineDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction("meta", "readonly");
+      const req = tx.objectStore("meta").get("offline_pack_info");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+  } catch(e) { return null; }
+}
+
+async function clearOfflineMapDB() {
+  try {
+    const db = await openOfflineDB();
+    const tx = db.transaction(["tiles", "meta"], "readwrite");
+    tx.objectStore("tiles").clear();
+    tx.objectStore("meta").clear();
+    updateOfflineStatusUI(null);
+  } catch(e) {}
+}
+
+function lon2tile(lon, zoom) { return Math.floor((lon + 180) / 360 * Math.pow(2, zoom)); }
+function lat2tile(lat, zoom) { return Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom)); }
+
+async function download15kmOfflineMapPack() {
+  if (!state.userLocation) {
+    alert("Please acquire your GPS location first!");
+    return;
+  }
+
+  const downloadBtn = document.getElementById("download-offline-map-btn");
+  const progressContainer = document.getElementById("offline-download-progress-container");
+  const progressBar = document.getElementById("offline-download-progress-bar");
+  const progressText = document.getElementById("offline-download-progress-text");
+
+  if (downloadBtn) downloadBtn.disabled = true;
+  if (progressContainer) progressContainer.classList.remove("hidden");
+
+  const centerLat = state.userLocation.lat;
+  const centerLng = state.userLocation.lng;
+  const radiusKm = 15;
+  const degOffset = radiusKm / 111;
+
+  const minLat = centerLat - degOffset;
+  const maxLat = centerLat + degOffset;
+  const minLng = centerLng - degOffset;
+  const maxLng = centerLng + degOffset;
+
+  const tileTasks = [];
+  for (let z = 12; z <= 15; z++) {
+    const xMin = lon2tile(minLng, z);
+    const xMax = lon2tile(maxLng, z);
+    const yMin = lat2tile(maxLat, z);
+    const yMax = lat2tile(minLat, z);
+
+    for (let x = xMin; x <= xMax; x++) {
+      for (let y = yMin; y <= yMax; y++) {
+        tileTasks.push({ z, x, y, url: `https://tile.openstreetmap.org/${z}/${x}/${y}.png` });
+      }
+    }
+  }
+
+  let downloadedCount = 0;
+  const totalTiles = tileTasks.length;
+
+  for (let i = 0; i < totalTiles; i += 4) {
+    const chunk = tileTasks.slice(i, i + 4);
+    await Promise.all(chunk.map(async (t) => {
+      try {
+        const key = `tile_${t.z}_${t.x}_${t.y}`;
+        const res = await fetch(t.url);
+        if (res.ok) {
+          const blob = await res.blob();
+          await saveOfflineTile(key, blob);
+        }
+      } catch(e) {}
+      downloadedCount++;
+      const percent = Math.round((downloadedCount / totalTiles) * 100);
+      if (progressBar) progressBar.style.width = `${percent}%`;
+      if (progressText) progressText.textContent = `Downloading 15 km map (${downloadedCount}/${totalTiles} tiles)... ${percent}%`;
+    }));
+  }
+
+  // Pre-fetch 15 km emergency facilities
+  if (progressText) progressText.textContent = "Downloading 15 km emergency facilities dataset...";
+  try {
+    const categories = ["hospital", "police", "fire_station", "pharmacy", "veterinary_care", "blood_bank"];
+    for (const cat of categories) {
+      await searchWithOverpassAPI(cat, state.userLocation, 15000);
+    }
+  } catch(e) {}
+
+  const meta = {
+    downloadedAt: Date.now(),
+    radius: 15,
+    userLocation: state.userLocation,
+    tileCount: downloadedCount
+  };
+  await saveOfflineMeta(meta);
+  updateOfflineStatusUI(meta);
+
+  if (downloadBtn) downloadBtn.disabled = false;
+  if (progressContainer) progressContainer.classList.add("hidden");
+  alert("✅ 15 km Offline Emergency Map Pack Installed Successfully!");
+}
+
+async function updateOfflineStatusUI(metaData) {
+  const badge = document.getElementById("offline-map-status-badge");
+  const clearBtn = document.getElementById("clear-offline-map-btn");
+  
+  const meta = metaData || await getOfflineMeta();
+  if (meta) {
+    if (badge) {
+      badge.textContent = `15 km Map Saved (${meta.tileCount} tiles)`;
+      badge.className = "px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300";
+    }
+    if (clearBtn) clearBtn.classList.remove("hidden");
+  } else {
+    if (badge) {
+      badge.textContent = "Not Downloaded";
+      badge.className = "px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200";
+    }
+    if (clearBtn) clearBtn.classList.add("hidden");
+  }
+}
+
+// Bind offline download buttons in Settings
+document.getElementById("download-offline-map-btn")?.addEventListener("click", download15kmOfflineMapPack);
+document.getElementById("clear-offline-map-btn")?.addEventListener("click", clearOfflineMapDB);
+
+// Check offline status on startup
+updateOfflineStatusUI();
