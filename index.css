@@ -400,7 +400,7 @@ dialog[open] {
     z-index: 1 !important;
   }
 
-  /* 2. Top Glass Header Bar - Compact Mobile Version */
+  /* 2. Top Glass Header Bar - High Transparency Translucent Mobile Version */
   header {
     position: fixed !important;
     top: 0 !important;
@@ -409,13 +409,17 @@ dialog[open] {
     height: 52px !important;
     z-index: 40 !important;
     padding: 0.35rem 0.85rem !important;
+    background: rgba(255, 255, 255, 0.55) !important;
+    backdrop-filter: blur(32px) saturate(1.8) !important;
+    -webkit-backdrop-filter: blur(32px) saturate(1.8) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.6) !important;
   }
 
   header h1 {
     font-size: 1.1rem !important;
   }
 
-  /* 3. Mobile Bottom Sheet Drawer (EXACT placement matching reference mockup) */
+  /* 3. Mobile Bottom Sheet Drawer - High Transparency Liquid Glass */
   #sidebar-island {
     position: fixed !important;
     top: auto !important;
@@ -427,12 +431,12 @@ dialog[open] {
     max-height: 42vh !important;
     z-index: 30 !important;
     padding: 0.65rem 0.85rem !important;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.98) 100%) !important;
-    backdrop-filter: blur(28px) saturate(1.8) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(1.8) !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.60) 0%, rgba(248, 250, 252, 0.38) 100%) !important;
+    backdrop-filter: blur(32px) saturate(1.8) !important;
+    -webkit-backdrop-filter: blur(32px) saturate(1.8) !important;
     border-radius: 28px 28px 0 0 !important;
-    border-top: 1.5px solid rgba(255, 255, 255, 0.9) !important;
-    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.16) !important;
+    border-top: 1.5px solid rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.12) !important;
     transition: height 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
     pointer-events: auto !important;
   }
@@ -441,6 +445,21 @@ dialog[open] {
   #sidebar-island.drawer-expanded {
     height: 84vh !important;
     max-height: 84vh !important;
+  }
+
+  /* Translucent Tiles & Cards inside Mobile Drawer */
+  #sidebar-island .glass-tile {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.35)) !important;
+    backdrop-filter: blur(24px) saturate(1.6) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(1.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  }
+
+  #sidebar-island .place-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.60), rgba(255, 255, 255, 0.40)) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
   }
 
   /* Drag handle indicator at top of mobile bottom drawer */
@@ -470,6 +489,7 @@ dialog[open] {
     min-width: 135px !important;
     padding: 0.6rem 0.75rem !important;
     scroll-snap-align: start;
+    opacity: 0.85 !important;
   }
 
   /* 4. Floating Action Buttons (SOS & Location Arrow) */
@@ -484,7 +504,7 @@ dialog[open] {
     height: 3.6rem !important;
   }
 
-  /* 5. Mobile Bottom Tab Navigation Bar */
+  /* 5. Mobile Bottom Tab Navigation Bar - High Transparency */
   nav {
     display: flex !important;
     position: fixed !important;
@@ -493,10 +513,10 @@ dialog[open] {
     right: 0 !important;
     height: 60px !important;
     z-index: 50 !important;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.98) 100%) !important;
-    backdrop-filter: blur(24px) !important;
-    -webkit-backdrop-filter: blur(24px) !important;
-    border-top: 1px solid rgba(226, 232, 240, 0.8) !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.60) 0%, rgba(248, 250, 252, 0.45) 100%) !important;
+    backdrop-filter: blur(28px) saturate(1.8) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(1.8) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.7) !important;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08) !important;
   }
 
