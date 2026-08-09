@@ -604,15 +604,26 @@
     </div>
   </dialog>
 
-  <!-- 5. Navigation Route HUD -->
-  <div id="route-hud" class="fixed top-16 left-1/2 -translate-x-1/2 z-40 glass-panel rounded-2xl px-5 py-2.5 border border-white/60 shadow-xl hidden flex items-center gap-5">
-    <div>
-      <h4 id="hud-dest-name" class="font-bold text-slate-800 text-xs">Navigating...</h4>
-      <p class="text-[11px] text-slate-500"><span id="hud-eta">-- min</span> (<span id="hud-dist">-- km</span>) • <span id="hud-traffic-status" class="text-emerald-600 font-semibold">Normal Traffic</span></p>
+  <!-- 5. Floating Navigation Route HUD -->
+  <div id="route-hud" class="fixed top-16 left-1/2 -translate-x-1/2 z-40 glass-panel rounded-2xl p-3 px-4 border border-white/60 shadow-2xl hidden flex items-center gap-4 max-w-lg w-[90vw] animate-fade-in-up">
+    <div class="flex items-center justify-center w-9 h-9 rounded-full bg-blue-600 text-white shrink-0 shadow-md">
+      <span class="material-symbols-outlined text-lg">navigation</span>
     </div>
-    <button id="close-hud-btn" class="p-1 rounded-full text-slate-400 hover:text-slate-600">
-      <span class="material-symbols-outlined text-xs">close</span>
-    </button>
+    <div class="flex-1 truncate">
+      <div class="flex items-center gap-2">
+        <span id="route-duration" class="font-headline text-xs font-extrabold text-blue-600">Calculating...</span>
+        <span id="route-distance" class="text-[11px] font-semibold text-slate-500">-- km</span>
+      </div>
+      <p id="route-summary" class="text-[11px] text-slate-600 truncate leading-tight mt-0.5">Computing live route...</p>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <a id="nav-external-btn" href="#" target="_blank" class="px-3 py-1 rounded-full bg-emerald-600 text-white font-bold text-[11px] shadow hover:bg-emerald-700 transition flex items-center gap-1">
+        <span>Google Maps ↗</span>
+      </a>
+      <button id="close-hud-btn" class="p-1 rounded-full text-slate-400 hover:text-slate-600">
+        <span class="material-symbols-outlined text-base">close</span>
+      </button>
+    </div>
   </div>
 
   <!-- Hidden mechanics elements -->
