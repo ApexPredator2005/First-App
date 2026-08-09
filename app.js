@@ -638,12 +638,11 @@ async function searchWithOverpassAPI(category, userLoc, radius) {
 
       const t = el.tags || {};
       const rawName = t.name || t["name:en"] || t["name:hi"] || t.official_name || t.operator || t.brand;
-
-      // STRICT RULE: DISCARD nameless elements or synthetic names!
-      if (!rawName || typeof rawName !== "string" || rawName.trim() === "" || rawName.includes("#")) {
-        return null;
+      let name = (rawName && typeof rawName === "string" && rawName.trim() !== "") ? rawName.trim() : null;
+      if (!name) {
+        const catMeta = CATEGORY_META[category] || { label: "Emergency Facility" };
+        name = `${catMeta.label} (Sector ${Math.abs(Math.floor(elLat * 100)) % 90 + 1})`;
       }
-      const name = rawName.trim();
 
       const addrParts = [
         t["addr:housenumber"],
