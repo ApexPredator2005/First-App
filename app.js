@@ -1191,160 +1191,94 @@ async function calculateAndRenderRoute(place) {
   DOM.routeSummary.textContent = `Computing shortest driving route to ${place.displayName}...`;
   
   const turnStepsBox = document.getElementById("turn-steps-box");
-  const turnStepsList = document.getElementById("turn-steps-list");
-  if (turnStepsBox) turnStepsBox.style.display = "none";
-  if (turnStepsList) turnStepsList.innerHTML = "";
 
-  try {
-    // DirectionsService & DirectionsRenderer live on google.maps global (not importLibrary)
+  state.navDestination = place;
+
+  // Leaflet OpenStreetMap Mode
+  if (state.leafletMap && window.L) {
+    if (state.leafletPolyline) {
+      state.leafletMap.removeLayer(state.leafletPolyline);
+      state.leafletPolyline = null;
+    }
+    try {
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${srcLng},${srcLat};${destLng},${destLat}?overview=full&geometries=geojson&steps=true`;
+      const res = await fetch(osrmUrl);
+      const data = await res.json();
+      if (data && data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+        state.leafletPolyline = L.polyline(coords, { color: "#007aff", weight: 6, opacity: 0.9 }).addTo(state.leafletMap);
+        state.leafletMap.fitBounds(state.leafletPolyline.getBounds(), { padding: [50, 50] });
+
+        const distKm = (route.distance / 1000).toFixed(1);
+        const approxMins = Math.round(route.duration / 60);
+
+        DOM.routeDuration.textContent = `~${approxMins} min`;
+        DOM.routeDistance.textContent = `${distKm} km`;
+        DOM.routeSummary.textContent = `OSRM OpenStreetMap Driving Route`;
+
+        state.lastRouteResponse = data;
+        const navUrl = `https://www.google.com/maps/dir/?api=1&origin=${srcLat},${srcLng}&destination=${destLat},${destLng}&travelmode=driving`;
+        DOM.navExternalBtn.setAttribute("href", navUrl);
+      }
+    } catch(e) {
+      console.warn("Leaflet route error:", e);
+    }
+    return;
+  }
+
+  // Google Maps Mode
+  if (window.google && state.map) {
     if (!state.directionsService) {
       state.directionsService = new google.maps.DirectionsService();
     }
     if (!state.directionsRenderer) {
       state.directionsRenderer = new google.maps.DirectionsRenderer({
         map: state.map,
-        suppressMarkers: true, // Keep our custom glowing Advanced Markers
-        polylineOptions: {
-          strokeColor: "#00f2fe",
-          strokeOpacity: 0.92,
-          strokeWeight: 7
-        }
+        suppressMarkers: true,
+        polylineOptions: { strokeColor: "#00f2fe", strokeOpacity: 0.92, strokeWeight: 7 }
       });
     } else {
       state.directionsRenderer.setMap(state.map);
     }
 
-    // Clear any previous fallback polyline
     if (state.currentRoutePolyline) {
       state.currentRoutePolyline.setMap(null);
       state.currentRoutePolyline = null;
     }
 
-    const request = {
-      origin: state.userLocation,
-      destination: place.location,
-      travelMode: google.maps.TravelMode.DRIVING,
-      provideRouteAlternatives: false // We want the single shortest route
-    };
-
-    let response;
-    if (routeCache.has(place.id)) {
-      response = routeCache.get(place.id);
-    } else {
-      response = await state.directionsService.route(request);
-      routeCache.set(place.id, response);
-    }
-    
-    state.directionsRenderer.setDirections(response);
-
-    if (response && response.routes && response.routes.length > 0) {
-      const bestRoute = response.routes[0];
-      const leg = bestRoute.legs[0];
-      
-      DOM.routeDuration.textContent = leg.duration ? leg.duration.text : "N/A";
-      DOM.routeDistance.textContent = leg.distance ? leg.distance.text : "-- km";
-      DOM.routeSummary.textContent = `Shortest route via ${bestRoute.summary || "main road"}. ${leg.duration ? leg.duration.text : ""} drive.`;
-
-      // Build Google Maps navigation URL (opens turn-by-turn voice navigation)
-      const destLat = place.location.lat();
-      const destLng = place.location.lng();
-      const navUrl = `https://www.google.com/maps/dir/?api=1&origin=${state.userLocation.lat},${state.userLocation.lng}&destination=${destLat},${destLng}&travelmode=driving`;
-      DOM.navExternalBtn.setAttribute("href", navUrl);
-
-      // Populate Step-by-Step Turn Instructions
-      if (leg.steps && leg.steps.length > 0 && turnStepsBox && turnStepsList) {
-        turnStepsBox.style.display = "block";
-        turnStepsList.innerHTML = "";
-        leg.steps.forEach((step, i) => {
-          const li = document.createElement("li");
-          li.className = "turn-step";
-          const distText = step.distance ? step.distance.text : "";
-          li.innerHTML = `<span class="step-instruction">${step.instructions}</span>
-                          <span class="step-dist">${distText}</span>`;
-          turnStepsList.appendChild(li);
-        });
-      }
-
-      // Fit map to show the full route
-      const bounds = new google.maps.LatLngBounds();
-      bounds.extend(state.userLocation);
-      bounds.extend(place.location);
-      state.map.fitBounds(bounds, { top: 80, right: 420, bottom: 80, left: 80 });
-
-      // Store for in-app navigation
-      state.lastRouteResponse = response;
-      state.navDestination = place;
-
-      // SOS Hook: if SOS is active, trigger comprehensive location + facility alert
-      if (state.sosActive) {
-        sendSOSLocation();
-      }
-    }
-  } catch (error) {
-    console.warn("DirectionsService error, using OSRM fallback:", error.message);
-    
-    // Handle both Google LatLng and plain objects
-    const destLat = typeof place.location.lat === 'function' ? place.location.lat() : place.location.lat;
-    const destLng = typeof place.location.lng === 'function' ? place.location.lng() : place.location.lng;
-    const srcLat = typeof state.userLocation.lat === 'function' ? state.userLocation.lat() : state.userLocation.lat;
-    const srcLng = typeof state.userLocation.lng === 'function' ? state.userLocation.lng() : state.userLocation.lng;
-
-    const { Polyline } = state.libraries.maps;
-    if (state.currentRoutePolyline) state.currentRoutePolyline.setMap(null);
-
     try {
-      // Try OSRM free routing API
-      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${srcLng},${srcLat};${destLng},${destLat}?overview=full&geometries=geojson`;
-      const osrmRes = await fetch(osrmUrl);
-      const osrmData = await osrmRes.json();
-      
-      if (osrmData && osrmData.routes && osrmData.routes.length > 0) {
-        const route = osrmData.routes[0];
-        const path = route.geometry.coordinates.map(coord => ({ lat: coord[1], lng: coord[0] }));
-        
-        state.currentRoutePolyline = new Polyline({
-          path: path,
-          geodesic: true,
-          strokeColor: "#00f2fe",
-          strokeOpacity: 0.92,
-          strokeWeight: 7,
-          map: state.map
+      const request = {
+        origin: state.userLocation,
+        destination: place.location,
+        travelMode: google.maps.TravelMode.DRIVING,
+        provideRouteAlternatives: false
+      };
+      const response = await new Promise((res, rej) => {
+        state.directionsService.route(request, (result, status) => {
+          if (status === "OK") res(result);
+          else rej(new Error(status));
         });
-
-        // Fit map to show the full route
-        const bounds = new google.maps.LatLngBounds();
-        path.forEach(p => bounds.extend(p));
-        state.map.fitBounds(bounds, { top: 80, right: 420, bottom: 80, left: 80 });
-
-        const distKm = (route.distance / 1000).toFixed(1);
-        const approxMins = Math.round(route.duration / 60);
-        DOM.routeDuration.textContent = `~${approxMins} min`;
-        DOM.routeDistance.textContent = `${distKm} km`;
-        DOM.routeSummary.textContent = `Route shown using OpenStreetMap routing.`;
-      } else {
-        throw new Error("No OSRM route found");
-      }
-    } catch (osrmError) {
-      console.warn("OSRM failed, using straight line fallback:", osrmError);
-      // Fallback: draw straight-line vector + estimate
-      state.currentRoutePolyline = new Polyline({
-        path: [{lat: srcLat, lng: srcLng}, {lat: destLat, lng: destLng}],
-        geodesic: true,
-        strokeColor: "#ff3864",
-        strokeOpacity: 0.9,
-        strokeWeight: 5,
-        map: state.map
       });
 
-      const distKm = (getApproxDistance(state.userLocation, {lat: destLat, lng: destLng}) / 1000).toFixed(1);
-      const approxMins = Math.round((distKm / 35) * 60) + 2;
-      DOM.routeDuration.textContent = `~${approxMins} min*`;
-      DOM.routeDistance.textContent = `${distKm} km`;
-      DOM.routeSummary.textContent = `Approximate route shown. Enable Directions API on your key for real road navigation.`;
+      if (response && response.routes && response.routes.length > 0) {
+        state.directionsRenderer.setDirections(response);
+        const bestRoute = response.routes[0];
+        const leg = bestRoute.legs[0];
+
+        DOM.routeDuration.textContent = leg.duration ? leg.duration.text : "N/A";
+        DOM.routeDistance.textContent = leg.distance ? leg.distance.text : "-- km";
+        DOM.routeSummary.textContent = `Shortest route via ${bestRoute.summary || "main road"}.`;
+
+        const navUrl = `https://www.google.com/maps/dir/?api=1&origin=${srcLat},${srcLng}&destination=${destLat},${destLng}&travelmode=driving`;
+        DOM.navExternalBtn.setAttribute("href", navUrl);
+
+        state.lastRouteResponse = response;
+      }
+    } catch(err) {
+      console.warn("DirectionsService failed, fallback to OSRM:", err.message);
     }
-    
-    const fallbackNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${srcLat},${srcLng}&destination=${destLat},${destLng}&travelmode=driving`;
-    DOM.navExternalBtn.setAttribute("href", fallbackNavUrl);
   }
 }
 

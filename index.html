@@ -647,7 +647,10 @@
       <p id="route-summary" class="text-[11px] text-slate-600 truncate leading-tight mt-0.5">Computing live route...</p>
     </div>
     <div class="flex items-center gap-2 shrink-0">
-      <a id="nav-external-btn" href="#" target="_blank" class="px-3 py-1 rounded-full bg-emerald-600 text-white font-bold text-[11px] shadow hover:bg-emerald-700 transition flex items-center gap-1">
+      <button id="start-nav-btn" type="button" class="px-3.5 py-1.5 rounded-full bg-blue-600 text-white font-bold text-xs shadow hover:bg-blue-700 transition flex items-center gap-1">
+        ▶️ Start Nav
+      </button>
+      <a id="nav-external-btn" href="#" target="_blank" class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-semibold text-[10px] border border-slate-200 hover:bg-slate-200 transition" title="Optional External Google Maps">
         <span>Google Maps ↗</span>
       </a>
       <button id="close-hud-btn" class="p-1 rounded-full text-slate-400 hover:text-slate-600">
@@ -656,13 +659,47 @@
     </div>
   </div>
 
+  <!-- 6. FULL-SCREEN IN-APP TURN-BY-TURN DRIVING NAVIGATION OVERLAY -->
+  <div id="nav-overlay" class="fixed inset-0 z-50 pointer-events-none hidden flex flex-col justify-between p-4">
+    <!-- Top Turn Banner (High Visibility Glass Card) -->
+    <div class="pointer-events-auto glass-panel rounded-3xl p-4 border border-white/70 shadow-2xl bg-white/90 backdrop-blur-2xl max-w-md mx-auto w-full flex items-center gap-4 animate-fade-in-down">
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center text-3xl font-extrabold shrink-0 shadow-lg" id="nav-step-icon">
+        ⬆️
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-0.5">
+          <span id="nav-step-dist" class="text-xs font-extrabold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">200 m</span>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Next Step</span>
+        </div>
+        <h4 id="nav-instruction" class="text-sm font-bold text-slate-800 leading-tight truncate">Head North on main road</h4>
+        <p id="nav-next-text" class="text-[11px] text-slate-500 truncate mt-0.5">Then turn right onto Station Road</p>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation Dashboard Bar -->
+    <div class="pointer-events-auto glass-panel rounded-3xl p-3 px-5 border border-white/70 shadow-2xl bg-white/95 backdrop-blur-2xl max-w-md mx-auto w-full flex items-center justify-between animate-fade-in-up">
+      <div class="flex items-center gap-4">
+        <div>
+          <span class="block text-[10px] font-bold text-slate-400 uppercase">Remaining</span>
+          <span id="nav-eta-value" class="text-base font-black text-emerald-600">8 min</span>
+        </div>
+        <div class="h-7 w-px bg-slate-200"></div>
+        <div>
+          <span class="block text-[10px] font-bold text-slate-400 uppercase">Distance</span>
+          <span id="nav-remaining-value" class="text-base font-black text-slate-800">2.4 km</span>
+        </div>
+      </div>
+
+      <button id="exit-nav-btn" type="button" class="px-3.5 py-2 rounded-2xl bg-red-600 text-white font-bold text-xs shadow hover:bg-red-700 transition flex items-center gap-1">
+        <span class="material-symbols-outlined text-sm">close</span> Exit Nav
+      </button>
+    </div>
+  </div>
+
   <!-- Hidden mechanics elements -->
   <div id="turn-steps-box" class="hidden"></div>
   <button id="sos-cancel-btn" class="hidden"></button>
   <div id="sos-status-bar" class="hidden"></div>
-  <button id="start-nav-btn" class="hidden"></button>
-  <button id="exit-nav-btn" class="hidden"></button>
-  <div id="nav-overlay" class="hidden"></div>
   <div id="offline-banner" class="hidden"></div>
 
   <!-- Engine Script -->
