@@ -40,6 +40,7 @@ html, body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  overscroll-behavior-y: contain;
   position: relative;
   font-family: var(--font-headline);
   background-color: var(--color-surface);
@@ -427,20 +428,6 @@ dialog[open] {
 .leaflet-marker-icon.marker-badge {
   box-sizing: border-box !important;
 }
-
-/* ============================================================================ */
-/* MOBILE ADAPTIVE RESPONSIVE DESIGN (Screens <= 768px)                          */
-/* ============================================================================ */
-@media (max-width: 768px) {
-  /* 1. Full Screen Interactive Map Canvas */
-  #map, #leaflet-canvas {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    z-index: 1 !important;
-  }
 
 /* ============================================================================ */
 /* MOBILE ADAPTIVE RESPONSIVE DESIGN (Screens <= 768px)                          */

@@ -62,9 +62,9 @@
       </div>
 
       <!-- Motivational Health Quotes Display in Top Bar -->
-      <div class="flex items-center gap-1.5 max-w-[180px] sm:max-w-md px-2.5 py-0.5 rounded-full bg-white/60 border border-white/70 text-[11px] text-slate-700 shadow-sm mx-auto truncate">
+      <div class="flex items-center gap-1.5 max-w-[240px] sm:max-w-md px-3 py-1 rounded-full bg-white/75 border border-white/80 text-[11.5px] text-slate-800 shadow-sm mx-auto truncate shrink-0">
         <span class="text-amber-500 text-xs shrink-0">💡</span>
-        <span id="quote-text" class="font-medium italic text-slate-600 truncate transition-all duration-500">Loading motivational quote...</span>
+        <span id="quote-text" class="font-semibold italic text-slate-700 truncate transition-all duration-500">Loading motivational quote...</span>
       </div>
 
       <div class="flex items-center gap-3">
@@ -80,6 +80,12 @@
       </div>
     </div>
   </header>
+
+  <!-- Mobile Pull-to-Refresh Indicator Toast -->
+  <div id="pull-refresh-indicator" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 glass-panel rounded-full px-4 py-1.5 border border-white/70 shadow-lg text-xs font-bold text-slate-700 hidden flex items-center gap-2 transition-all duration-300">
+    <span class="material-symbols-outlined text-blue-600 text-sm" id="pull-refresh-spinner">sync</span>
+    <span id="pull-refresh-text">Pull to refresh facilities...</span>
+  </div>
 
   <!-- 2. SCROLLABLE LEFT SIDEBAR ISLAND (Compact Proportions for 100% Zoom) -->
   <aside id="sidebar-island" class="md:fixed md:top-14 md:left-0 md:bottom-0 md:w-[360px] lg:w-[380px] overflow-y-auto custom-scroll z-20 p-3.5 md:p-4 pointer-events-none">

@@ -114,7 +114,7 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 }
 
 async function loadStoredSettings() {
-  let defaultKey = "";
+  let defaultKey = "AIzaSyB9GfTq1ZxVNIHWWni-Av4oTXX77Vy0VJo";
 
   // Check localStorage for previously saved API key
   let savedKey = localStorage.getItem("GMP_API_KEY");
@@ -1451,9 +1451,19 @@ function setupEventListeners() {
   const mapLocationBtn = document.getElementById("map-location-btn");
   if (mapLocationBtn) {
     mapLocationBtn.addEventListener("click", async () => {
+      showToast("📍 Recentering map on your GPS location...", "info");
       await detectUserLocation();
-      if (state.map && state.userLocation) {
-        state.map.setCenter(state.userLocation);
+      if (state.userLocation) {
+        if (state.map) {
+          state.map.setCenter(state.userLocation);
+          state.map.setZoom(14);
+        }
+        if (state.leafletMap) {
+          state.leafletMap.setView([state.userLocation.lat, state.userLocation.lng], 14);
+          if (typeof updateLeafletUserMarker === "function") {
+            updateLeafletUserMarker();
+          }
+        }
       }
       performNearbySearch();
     });
@@ -2745,3 +2755,78 @@ document.getElementById("clear-offline-map-btn")?.addEventListener("click", clea
 
 // Check offline status on startup
 updateOfflineStatusUI();
+
+// ============================================================================
+// MOBILE PULL-TO-REFRESH GESTURE ENGINE
+// ============================================================================
+function setupPullToRefresh() {
+  let startY = 0;
+  let currentY = 0;
+  let isPulling = false;
+  const indicator = document.getElementById("pull-refresh-indicator");
+  const textEl = document.getElementById("pull-refresh-text");
+  const spinner = document.getElementById("pull-refresh-spinner");
+
+  const header = document.querySelector("header");
+  const drawer = document.getElementById("sidebar-island");
+
+  function handleTouchStart(e) {
+    if (window.innerWidth > 768) return;
+    const scrollTop = drawer ? drawer.scrollTop : 0;
+    if (scrollTop <= 0) {
+      startY = e.touches[0].clientY;
+      isPulling = true;
+    }
+  }
+
+  function handleTouchMove(e) {
+    if (!isPulling || window.innerWidth > 768) return;
+    currentY = e.touches[0].clientY;
+    const deltaY = currentY - startY;
+
+    if (deltaY > 50) {
+      if (indicator) {
+        indicator.classList.remove("hidden");
+        indicator.style.transform = `translate(-50%, ${Math.min(deltaY * 0.4, 40)}px)`;
+      }
+      if (deltaY > 110 && textEl) {
+        textEl.textContent = "Release to refresh emergency data!";
+      }
+    }
+  }
+
+  async function handleTouchEnd() {
+    if (!isPulling || window.innerWidth > 768) return;
+    isPulling = false;
+    const deltaY = currentY - startY;
+
+    if (deltaY > 110) {
+      if (textEl) textEl.textContent = "Refreshing nearby emergency facilities...";
+      if (spinner) spinner.classList.add("animate-spin");
+      
+      // Clear cache & refresh GPS scan
+      googlePlacesCache.clear();
+      overpassCache.clear();
+      await requestUserLocation();
+
+      setTimeout(() => {
+        if (indicator) indicator.classList.add("hidden");
+        if (textEl) textEl.textContent = "Pull to refresh facilities...";
+      }, 1000);
+    } else {
+      if (indicator) indicator.classList.add("hidden");
+    }
+    startY = 0;
+    currentY = 0;
+  }
+
+  header?.addEventListener("touchstart", handleTouchStart, { passive: true });
+  header?.addEventListener("touchmove", handleTouchMove, { passive: true });
+  header?.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+  drawer?.addEventListener("touchstart", handleTouchStart, { passive: true });
+  drawer?.addEventListener("touchmove", handleTouchMove, { passive: true });
+  drawer?.addEventListener("touchend", handleTouchEnd, { passive: true });
+}
+
+setupPullToRefresh();
