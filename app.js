@@ -55,7 +55,6 @@ const DOM = {
   coordsDisplay: document.getElementById("coordinates-display"),
   rescanBtn: document.getElementById("rescan-btn"),
   openLocationModalBtn: document.getElementById("open-location-modal-btn"),
-  mapLocationBtn: document.getElementById("map-location-btn"),
   radiusSelect: document.getElementById("radius-select"),
   openSettingsBtn: document.getElementById("open-settings-btn"),
   pills: document.querySelectorAll(".category-pills .pill"),
@@ -184,7 +183,7 @@ async function initializeAppEngine() {
       await loadGoogleMapsScript(state.apiKey);
     }
 
-    // 2. Render Map Stage if Google Maps SDK is ready (Render immediately before waiting for GPS)
+    // 2. Render Map Stage immediately if Google Maps SDK is ready
     if (window.google && window.google.maps) {
       try { renderMap(); } catch(e) { console.warn("Map render notice:", e); }
     } else {
@@ -314,14 +313,14 @@ async function reverseGeocode(lat, lng) {
 }
 
 async function detectUserLocation() {
-  if (DOM.coordsDisplay) DOM.coordsDisplay.textContent = "Acquiring high-precision GPS location...";
+  DOM.coordsDisplay.textContent = "Acquiring high-precision GPS location...";
   
   return new Promise((resolve) => {
     const finishLocation = (coords, fallbackLabel) => {
       applyLocation(coords, fallbackLabel);
       resolve(coords);
       reverseGeocode(coords.lat, coords.lng).then(address => {
-        if (address && DOM.coordsDisplay) {
+        if (address) {
           DOM.coordsDisplay.textContent = address;
         }
       });
@@ -365,7 +364,7 @@ async function detectUserLocation() {
 
 function applyLocation(coords, label) {
   state.userLocation = { lat: coords.lat, lng: coords.lng };
-  if (DOM.coordsDisplay) DOM.coordsDisplay.textContent = label;
+  DOM.coordsDisplay.textContent = label;
   if (state.map) {
     state.map.setCenter(state.userLocation);
     updateUserMarker();
@@ -1427,12 +1426,10 @@ function setupEventListeners() {
   });
 
   // GPS Rescan
-  if (DOM.rescanBtn) {
-    DOM.rescanBtn.addEventListener("click", async () => {
-      await detectUserLocation();
-      performNearbySearch();
-    });
-  }
+  DOM.rescanBtn.addEventListener("click", async () => {
+    await detectUserLocation();
+    performNearbySearch();
+  });
 
   // Location Modal Triggers & Custom Address Search
   if (DOM.openLocationModalBtn) {
@@ -1440,50 +1437,6 @@ function setupEventListeners() {
       DOM.locationErrorText.classList.add("hidden");
       DOM.locationModal.showModal();
     });
-  }
-
-  // New Custom Map Location Button (Click vs Long Press)
-  if (DOM.mapLocationBtn) {
-    let pressTimer;
-    const longPressDuration = 600; // ms
-
-    const startPress = (e) => {
-      if (e.type === 'touchstart') e.preventDefault(); // Prevent default touch to avoid double firing
-      pressTimer = window.setTimeout(() => {
-        // Long Press triggered
-        pressTimer = null;
-        DOM.locationErrorText.classList.add("hidden");
-        DOM.locationModal.showModal();
-      }, longPressDuration);
-    };
-
-    const cancelPress = () => {
-      if (pressTimer !== null) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-      }
-    };
-
-    const handleMouseUp = (e) => {
-      if (pressTimer !== null) {
-        // It was a short click
-        clearTimeout(pressTimer);
-        pressTimer = null;
-        
-        // Recenter to GPS location
-        detectUserLocation().then(() => {
-          performNearbySearch();
-        });
-      }
-    };
-
-    DOM.mapLocationBtn.addEventListener("mousedown", startPress);
-    DOM.mapLocationBtn.addEventListener("touchstart", startPress);
-
-    DOM.mapLocationBtn.addEventListener("mouseup", handleMouseUp);
-    DOM.mapLocationBtn.addEventListener("touchend", handleMouseUp);
-    DOM.mapLocationBtn.addEventListener("mouseleave", cancelPress);
-    DOM.mapLocationBtn.addEventListener("touchcancel", cancelPress);
   }
   DOM.closeLocationModal.addEventListener("click", () => DOM.locationModal.close());
   
