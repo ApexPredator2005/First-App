@@ -18,5 +18,17 @@
     "glassmorphism"
   ],
   "author": "Antigravity Pair Programming Team",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ApexPredator2005/First-App.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ApexPredator2005/First-App/issues"
+  },
+  "homepage": "https://github.com/ApexPredator2005/First-App#readme",
+  "dependencies": {
+    "jsdom": "^30.0.1"
+  }
 }

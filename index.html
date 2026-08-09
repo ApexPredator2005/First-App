@@ -1,583 +1,595 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ResQNow | Nearest Emergency Services & Live Traffic Routes</title>
-  <meta name="description" content="ResQNow — find the nearest hospitals, police stations, fire departments and pharmacies around you with live traffic-aware routing powered by Google Maps Platform.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ResQNow - Live Emergency Radar</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#007aff">
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#0058bc",
+            "primary-container": "#0070eb",
+            "secondary": "#bc000a",
+            "surface": "#f9f9fe",
+            "surface-container": "#ededf2",
+            "on-surface": "#1a1c1f"
+          },
+          fontFamily: {
+            headline: ["Hanken Grotesk"],
+            body: ["Inter"]
+          }
+        }
+      }
+    }
+  </script>
 </head>
-<body>
-  <!-- Ambient Living Cyber-Plasma Background & Grid -->
-  <div class="ambient-background" aria-hidden="true">
-    <div class="glow-orb orb-1"></div>
-    <div class="glow-orb orb-2"></div>
-    <div class="glow-orb orb-3"></div>
-    <div class="glow-orb orb-4"></div>
-    <div class="cyber-grid"></div>
+<body class="text-on-surface antialiased relative w-screen h-screen overflow-hidden">
+  <!-- Ethereal Background Shader -->
+  <div class="shader-bg"></div>
+
+  <!-- 1. FULL-SCREEN FIXED MAP BACKGROUND -->
+  <div id="map-container" class="fixed inset-0 w-full h-full z-0">
+    <div id="map" class="w-full h-full"></div>
   </div>
 
-  <div id="app-container" class="app-container">
-    <!-- Top Glass Navigation Bar -->
-    <header class="app-header glass-panel">
-      <div class="logo-group">
-        <div class="logo-icon-wrap">
-          <div class="logo-icon heartbeat">🚨</div>
-          <span class="pulse-ring-outer"></span>
-        </div>
-        <div class="logo-text">
-          <h1>ResQNow</h1>
-          <span class="tagline">FIND HELP. FAST. ANYWHERE.</span>
-        </div>
-      </div>
-
-      <!-- Rotating Health Quote Ticker -->
-      <div class="health-quote-ticker" id="health-quote-ticker">
-        <span class="quote-icon">💡</span>
-        <span class="quote-text" id="quote-text">Invest in your body now, or pay interest on your health later.</span>
-      </div>
-
-      <!-- Real-Time Geolocation & Scan Tools -->
-      <div class="nav-controls">
-        <div class="status-badge gps-badge" id="location-status" title="Your current detected coordinates">
-          <span class="status-dot pulsing"></span>
-          <span id="coordinates-display">Scanning GPS Lock...</span>
-          <button id="rescan-btn" title="Re-scan GPS location" aria-label="Re-scan current location">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-          </button>
-          <button id="open-location-modal-btn" class="btn-tiny" title="Set address manually">
-            <span>Change</span>
-          </button>
-        </div>
-
-        <!-- Search Radius Dropdown -->
-        <div class="control-group">
-          <label for="radius-select">Radius:</label>
-          <select id="radius-select" aria-label="Search radius in kilometers">
-            <option value="2000">2 km</option>
-            <option value="5000" selected>5 km</option>
-            <option value="10000">10 km</option>
-            <option value="15000">15 km</option>
-          </select>
-        </div>
-
-
-        <!-- API Config Trigger -->
-        <button id="open-settings-btn" class="btn btn-settings" title="Configure Google Maps Demo Key / API Key">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-          <span>API</span>
-        </button>
-        <button id="open-health-btn" class="btn btn-health" title="My Health Profile & Records">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-          <span>My Health Profile</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- Main Workspace Matrix -->
-    <main class="main-workspace">
-      <!-- Left Sidebar: Category Selector & Live Results Feed -->
-      <aside class="sidebar-panel glass-panel" style="order:1;">
-        <div class="sidebar-header">
-          <h2>Emergency Squadrons</h2>
-          <p>Select a category to find active emergency units near you</p>
-        </div>
-
-        <!-- Vibrant Interactive Category Pills -->
-        <nav class="category-pills" aria-label="Emergency category selectors">
-          <button class="pill pill-hospital active" data-category="hospital" aria-label="Show nearby hospitals">
-            <span class="pill-icon">🏥</span>
-            <span class="pill-label">Hospitals</span>
-            <span class="pill-count" id="count-hospital">0</span>
-            <div class="pill-glow"></div>
-          </button>
-          <button class="pill pill-police" data-category="police" aria-label="Show nearby police stations">
-            <span class="pill-icon">🚓</span>
-            <span class="pill-label">Police</span>
-            <span class="pill-count" id="count-police">0</span>
-            <div class="pill-glow"></div>
-          </button>
-          <button class="pill pill-fire" data-category="fire_station" aria-label="Show nearby fire stations">
-            <span class="pill-icon">🚒</span>
-            <span class="pill-label">Fire Stations</span>
-            <span class="pill-count" id="count-fire_station">0</span>
-            <div class="pill-glow"></div>
-          </button>
-          <button class="pill pill-pharmacy" data-category="pharmacy" aria-label="Show nearby pharmacies">
-            <span class="pill-icon">💊</span>
-            <span class="pill-label">Pharmacies</span>
-            <span class="pill-count" id="count-pharmacy">0</span>
-            <div class="pill-glow"></div>
-          </button>
-          <button class="pill pill-vet" data-category="veterinary_care" aria-label="Show nearby veterinary clinics">
-            <span class="pill-icon">🐾</span>
-            <span class="pill-label">Vet Clinics</span>
-            <span class="pill-count" id="count-veterinary_care">0</span>
-            <div class="pill-glow"></div>
-          </button>
-          <button class="pill pill-blood" data-category="blood_bank" aria-label="Show nearby blood banks">
-            <span class="pill-icon">🩸</span>
-            <span class="pill-label">Blood Banks</span>
-            <span class="pill-count" id="count-blood_bank">0</span>
-            <div class="pill-glow"></div>
-          </button>
-        </nav>
-
-        <!-- Dynamic Results Feed -->
-        <section class="results-section" aria-live="polite">
-          <div class="results-toolbar">
-            <span id="feed-status" class="feed-status">Awaiting radar lock...</span>
-            <div class="spinner" id="spinner" aria-hidden="true"></div>
-          </div>
-          
-          <!-- Scrollable Card List -->
-          <ul id="places-feed" class="places-feed">
-            <li class="empty-state-card">
-              <span class="empty-icon">🛰️</span>
-              <p>Scanning surrounding coordinates... Select a category above to view immediate response units.</p>
-            </li>
-          </ul>
-        </section>
-
-        <!-- Emergency Hotline Footer Banner -->
-        <footer class="sidebar-footer">
-          <div class="emergency-banner">
-            <div class="helpline-header">
-              <span class="alert-icon">🆘</span>
-              <strong>Emergency Helplines (India)</strong>
-            </div>
-            <div class="helpline-scroll">
-              <div class="helpline-row"><span>👮 Police</span><a href="tel:100" class="helpline-num">100</a></div>
-              <div class="helpline-row"><span>🚒 Fire Dept</span><a href="tel:101" class="helpline-num">101</a></div>
-              <div class="helpline-row"><span>🚑 Ambulance</span><a href="tel:102" class="helpline-num">102</a></div>
-              <div class="helpline-row"><span>👶 Child Helpline</span><a href="tel:1098" class="helpline-num">1098</a></div>
-              <div class="helpline-row"><span>👩 Women Helpline</span><a href="tel:1091" class="helpline-num">1091</a></div>
-              <div class="helpline-row"><span>🛡️ Cyber Crime</span><a href="tel:1930" class="helpline-num">1930</a></div>
-              <div class="helpline-row"><span>🌊 Disaster Mgmt</span><a href="tel:1078" class="helpline-num">1078</a></div>
-              <div class="helpline-row"><span>🎓 Anti-Ragging</span><a href="tel:18001805522" class="helpline-num">1800-180-5522</a></div>
-              <div class="helpline-row"><span>✈️ Air Accident</span><a href="tel:1800114747" class="helpline-num">1800-11-4747</a></div>
-              <div class="helpline-row"><span>🐾 Animal Helpline</span><a href="tel:1962" class="helpline-num">1962</a></div>
-            </div>
-          </div>
-        </footer>
-      </aside>
-
-      <!-- Left Interactive Map Display -->
-      <section id="map-container" class="map-stage glass-panel" style="order:2;">
-        <!-- Interactive Google Maps Canvas (Explicitly height sized to prevent CF2 error) -->
-        <div id="map" class="map-canvas" aria-label="Interactive map showing your location and nearby emergency services"></div>
+  <!-- Top Glass Navigation Bar -->
+  <header class="glass-panel border-b border-white/40 shadow-sm fixed top-0 w-full z-40 animate-fade-in-up">
+    <div class="flex justify-between items-center w-full px-5 py-2.5 max-w-[1600px] mx-auto">
+      <div class="flex items-center gap-3">
+        <!-- Logo Image + ResQNow Text Name -->
+        <a href="#" class="flex items-center gap-2.5">
+          <img src="logo.png" alt="ResQNow Logo" class="h-8 w-auto object-contain">
+          <h1 class="font-headline text-[20px] font-bold text-slate-800 tracking-tight">ResQNow</h1>
+        </a>
         
-        <!-- Live Traffic Turn-by-Turn HUD (Appears when route is active) -->
-        <div id="route-hud" class="route-hud glass-floating hidden" aria-live="polite">
-          <header class="hud-header">
-            <div class="hud-title">
-              <span class="hud-pulse"></span>
-              <h3>🧭 Shortest Route Navigation</h3>
+        <!-- Live GPS Location Display -->
+        <div class="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 border border-white/70 text-xs font-semibold text-slate-700 ml-3 shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span id="coordinates-display">Acquiring GPS...</span>
+          <button id="rescan-btn" class="text-primary hover:text-blue-700 ml-1 flex items-center" title="Rescan GPS">
+            <span class="material-symbols-outlined text-[15px]">refresh</span>
+          </button>
+          <button id="open-location-modal-btn" class="text-xs text-blue-600 font-bold ml-1 hover:underline">Change</button>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div id="spinner" class="spinner hidden"></div>
+        <span id="feed-status" class="text-xs font-medium text-slate-500 hidden md:inline-block"></span>
+        
+        <button id="open-health-btn" class="px-3.5 py-1.5 rounded-full glass-panel interactive-element text-slate-800 font-bold text-xs border border-white/60 shadow-sm hidden md:block">
+          My Health Profile
+        </button>
+        <button id="open-settings-btn" class="p-2 rounded-full glass-panel interactive-element text-slate-700 border border-white/60 shadow-sm flex items-center justify-center">
+          <span class="material-symbols-outlined text-[18px]">settings</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. SCROLLABLE LEFT SIDEBAR ISLAND (Compact Proportions for 100% Zoom) -->
+  <aside id="sidebar-island" class="fixed top-14 left-0 bottom-0 w-full md:w-[360px] lg:w-[380px] overflow-y-auto custom-scroll z-20 p-3.5 md:p-4 pointer-events-none">
+    <div class="pointer-events-auto flex flex-col gap-4 pb-20">
+      
+      <!-- Search Radius Selector Tile -->
+      <div class="glass-tile p-3 px-4 rounded-2xl flex items-center justify-between w-full interactive-element animate-fade-in-up stagger-1">
+        <span class="font-body text-[13px] font-semibold text-slate-700">Search Radius</span>
+        <select id="radius-select" class="bg-white/60 border border-white/80 outline-none text-primary font-bold text-xs cursor-pointer px-3 py-1 pr-7 rounded-xl shadow-sm hover:bg-white/80 transition-all">
+          <option value="2000">2 km</option>
+          <option value="5000" selected>5 km</option>
+          <option value="10000">10 km</option>
+          <option value="15000">15 km</option>
+        </select>
+      </div>
+
+      <!-- Emergency Squadrons Grid -->
+      <section class="glass-tile p-3.5 rounded-2xl animate-fade-in-up stagger-2 category-pills">
+        <h2 class="font-headline text-[15px] font-semibold text-slate-800 mb-2.5 px-1">Emergency Squadrons</h2>
+        <div class="grid grid-cols-2 gap-2.5">
+          
+          <button class="pill pill-hospital active glass-card-hospital interactive-element rounded-2xl p-3 flex flex-col items-start gap-1 text-white relative overflow-hidden" data-category="hospital">
+            <div class="flex justify-between w-full items-center">
+              <span class="font-body text-[13px] font-semibold pill-label">Hospitals</span>
+              <span class="text-base">🏥</span>
             </div>
-            <button id="close-hud-btn" class="btn-close-hud" aria-label="Cancel active navigation">&times;</button>
-          </header>
-          <div class="hud-body">
-            <div class="hud-stat-box">
-              <span class="stat-label">Estimated Time</span>
-              <span id="route-duration" class="stat-value highlight">-- min</span>
+            <span class="font-headline text-[20px] font-extrabold mt-1 pill-count" id="count-hospital">0</span>
+          </button>
+
+          <button class="pill pill-police glass-card-police interactive-element rounded-2xl p-3 flex flex-col items-start gap-1 text-white relative overflow-hidden" data-category="police">
+            <div class="flex justify-between w-full items-center">
+              <span class="font-body text-[13px] font-semibold pill-label">Police</span>
+              <span class="text-base">👮</span>
             </div>
-            <div class="hud-stat-box">
-              <span class="stat-label">Driving Distance</span>
-              <span id="route-distance" class="stat-value">-- km</span>
+            <span class="font-headline text-[20px] font-extrabold mt-1 pill-count" id="count-police">0</span>
+          </button>
+
+          <button class="pill pill-fire glass-card-fire interactive-element rounded-2xl p-3 flex flex-col items-start gap-1 text-white relative overflow-hidden" data-category="fire_station">
+            <div class="flex justify-between w-full items-center">
+              <span class="font-body text-[13px] font-semibold pill-label">Fire Stations</span>
+              <span class="text-base">🚒</span>
             </div>
-            <div class="hud-stat-box full-width">
-              <span class="stat-label">Route Summary</span>
-              <p id="route-summary" class="stat-text">Optimal shortest path selected.</p>
+            <span class="font-headline text-[20px] font-extrabold mt-1 pill-count" id="count-fire_station">0</span>
+          </button>
+
+          <button class="pill pill-pharmacy glass-card-pharmacy interactive-element rounded-2xl p-3 flex flex-col items-start gap-1 text-slate-800 relative overflow-hidden" data-category="pharmacy">
+            <div class="flex justify-between w-full items-center">
+              <span class="font-body text-[13px] font-semibold pill-label">Pharmacies</span>
+              <span class="text-base">💊</span>
             </div>
-            <!-- Step-by-Step Turn Instructions -->
-            <div class="hud-stat-box full-width turn-steps-container" id="turn-steps-box" style="display:none;">
-              <span class="stat-label">📋 Turn-by-Turn Directions</span>
-              <ol id="turn-steps-list" class="turn-steps-list"></ol>
+            <span class="font-headline text-[20px] font-extrabold mt-1 pill-count" id="count-pharmacy">0</span>
+          </button>
+
+          <button class="pill pill-vet glass-card-vet interactive-element rounded-2xl p-3 flex flex-col items-start gap-1 text-slate-800 relative overflow-hidden" data-category="veterinary_care">
+            <div class="flex justify-between w-full items-center">
+              <span class="font-body text-[13px] font-semibold pill-label">Vet Clinics</span>
+              <span class="text-base">🐾</span>
             </div>
-          </div>
-          <footer class="hud-footer" style="display:flex;gap:0.5rem;">
-            <button id="start-nav-btn" class="btn btn-action btn-pulse" style="flex:1;">
-              <span>🧭 Start In-App Navigation</span>
-            </button>
-            <a id="nav-external-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="flex:0;white-space:nowrap;padding:0.6rem 0.9rem;font-size:0.78rem;">
-              <span>↗ Google Maps</span>
-            </a>
-          </footer>
+            <span class="font-headline text-[20px] font-extrabold mt-1 pill-count" id="count-veterinary_care">0</span>
+          </button>
+
+          <button class="pill pill-blood glass-card-blood interactive-element rounded-2xl p-3 flex flex-col items-start gap-1 text-white relative overflow-hidden" data-category="blood_bank">
+            <div class="flex justify-between w-full items-center">
+              <span class="font-body text-[13px] font-semibold pill-label">Blood Banks</span>
+              <span class="text-base">🩸</span>
+            </div>
+            <span class="font-headline text-[20px] font-extrabold mt-1 pill-count" id="count-blood_bank">0</span>
+          </button>
+
         </div>
       </section>
-    </main>
-  </div>
 
-  <!-- Floating SOS Emergency Button -->
-  <button id="sos-btn" class="sos-button" aria-label="Emergency SOS">
-    <span class="sos-icon">🆘</span>
-    <span class="sos-text">SOS</span>
-    <div class="sos-pulse-ring"></div>
-  </button>
+      <!-- Dynamic Results Feed (Scrollbar within Scrollbar) -->
+      <section class="glass-tile p-3.5 rounded-2xl animate-fade-in-up stagger-3">
+        <h2 class="font-headline text-[15px] font-semibold text-slate-800 mb-2.5 px-1">Results</h2>
+        <ul id="places-feed" class="max-h-[290px] overflow-y-auto custom-scroll pr-1 flex flex-col gap-2.5">
+          <li class="glass-panel p-4 rounded-xl text-center text-slate-500 text-xs">
+            Scanning surrounding coordinates... Select a category above to view immediate response units.
+          </li>
+        </ul>
+      </section>
 
-  <!-- SOS Active Status Bar -->
-  <div id="sos-status-bar" class="sos-status-bar hidden">
-    <span class="sos-blink"></span>
-    <span>📡 SOS ACTIVE — Sending live location...</span>
-    <button id="sos-cancel-btn" class="btn-tiny">✕ Cancel SOS</button>
-  </div>
-
-  <!-- SOS Confirmation Modal -->
-  <dialog id="sos-modal" class="glass-modal">
-    <div class="modal-content sos-modal-content">
-      <header class="modal-header">
-        <h2>🆘 Emergency SOS</h2>
-        <button id="close-sos-modal" class="btn-close">&times;</button>
-      </header>
-      <div class="modal-body">
-        <p class="sos-warning">This will start sending your <strong>continuous live GPS location</strong> to your emergency contact via WhatsApp.</p>
-        <div class="form-group">
-          <label for="sos-phone">📞 Send location to (phone number):</label>
-          <input type="tel" id="sos-phone" placeholder="e.g., +91 98765 43210">
-          <small>Uses your profile's emergency contact by default.</small>
-        </div>
-      </div>
-      <footer class="modal-footer" style="gap:0.6rem; flex-direction:column;">
-        <button id="sos-confirm-btn" class="btn btn-sos-confirm" style="width:100%;">🚨 ACTIVATE SOS</button>
-        <button id="sos-modal-cancel" class="btn btn-secondary" style="width:100%; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:0.75rem; border-radius:14px; font-size:0.95rem; font-weight:600; cursor:pointer;">✕ Cancel</button>
-      </footer>
-    </div>
-  </dialog>
-
-  <!-- In-App Navigation Overlay -->
-  <div id="nav-overlay" class="nav-overlay hidden">
-    <div class="nav-top-bar">
-      <div class="nav-current-step">
-        <span id="nav-step-icon" class="nav-step-icon">➡️</span>
-        <div class="nav-step-text">
-          <p id="nav-instruction" class="nav-instruction">Calculating route...</p>
-          <span id="nav-step-dist" class="nav-step-dist"></span>
-        </div>
-      </div>
-      <button id="exit-nav-btn" class="btn-exit-nav">✕ Exit</button>
-    </div>
-    <div class="nav-bottom-bar">
-      <div class="nav-eta">
-        <span class="nav-eta-label">ETA</span>
-        <span id="nav-eta-value" class="nav-eta-value">--</span>
-      </div>
-      <div class="nav-remaining">
-        <span class="nav-eta-label">Remaining</span>
-        <span id="nav-remaining-value" class="nav-eta-value">--</span>
-      </div>
-      <div id="nav-next-step" class="nav-next-step">
-        <span class="nav-eta-label">Next</span>
-        <span id="nav-next-text" class="nav-next-text">--</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Offline Banner -->
-  <div id="offline-banner" class="offline-banner hidden">
-    <span>📡 You are offline — app cached for emergency use</span>
-  </div>
-
-  <!-- =====================================================================
-       Modals & Interactive Popups (Defaults to display:none when closed)
-       ===================================================================== -->
-  <!-- Facility Details Dialog -->
-  <dialog id="place-modal" class="glass-modal">
-    <div class="modal-content place-details-content">
-      <header class="modal-header">
-        <h2 id="modal-place-name">Facility Name</h2>
-        <button id="close-place-modal" class="btn-close" aria-label="Close modal">&times;</button>
-      </header>
-      <div class="modal-body" id="modal-place-details">
-        <!-- populated dynamically via JS -->
-      </div>
-      <footer class="modal-footer">
-        <button id="modal-route-btn" class="btn btn-primary">
-          <span>⚡ Generate Live Route</span>
-        </button>
-      </footer>
-    </div>
-  </dialog>
-
-  <!-- Custom Address Search Modal -->
-  <dialog id="location-modal" class="glass-modal">
-    <div class="modal-content">
-      <header class="modal-header">
-        <h2>📍 Set Custom Scan Epicenter</h2>
-        <button id="close-location-modal" class="btn-close" aria-label="Close location modal">&times;</button>
-      </header>
-      <div class="modal-body">
-        <p class="settings-intro">
-          If automatic desktop GPS is unavailable or blocked by macOS System Privacy, enter any street address, neighborhood, or city below to instantly re-center the map and scan emergency squadrons.
-        </p>
-        <div class="form-group">
-          <label for="custom-location-input">Search City, Zip Code, or Street Address:</label>
-          <div class="input-group">
-            <input type="text" id="custom-location-input" placeholder="e.g., 5th Avenue New York, or Central London..." autocomplete="off">
-            <button id="search-location-btn" class="btn btn-primary">Scan Here</button>
-          </div>
-          <small id="location-error-text" class="error-text hidden">Unable to find coordinates for this address.</small>
-        </div>
-        <div class="alert alert-info" style="margin-top: 1.25rem;">
-          <strong>💡 Pro Tip: Instant Map Touchdown</strong>
-          <ul>
-            <li><strong>Right-click (or two-finger tap) anywhere on the map canvas</strong> to drop your emergency starting beacon instantly!</li>
-            <li>You can also click and drag your pulsing cyan locator pin across the map at any time!</li>
-          </ul>
-        </div>
-      </div>
-      <footer class="modal-footer">
-        <button id="retry-gps-btn" class="btn btn-secondary">
-          <span>🔄 Re-attempt Browser GPS Lock</span>
-        </button>
-      </footer>
-    </div>
-  </dialog>
-
-  <!-- Google Maps Platform API Settings & Demo Key Modal -->
-  <dialog id="settings-modal" class="glass-modal">
-    <div class="modal-content settings-content">
-      <header class="modal-header">
-        <h2>🔑 Google Maps Platform Configuration</h2>
-        <button id="close-settings-modal" class="btn-close" aria-label="Close configuration modal">&times;</button>
-      </header>
-      <div class="modal-body">
-        <div class="quickstart-box">
-          <h3>⚡ Instant Zero-Cost Prototyping!</h3>
-          <p>You can test this interactive application immediately with NO credit card or billing account needed. Generate a FREE Maps Demo Key in 5 seconds:</p>
-          <a href="https://mapsplatform.google.com/maps-demo-key?utm_campaign=gmp_git_agentskills_v1" target="_blank" rel="noopener noreferrer" class="btn btn-demo-key">
-            <span>🎁 Claim FREE Google Maps Demo Key</span>
+      <!-- Complete Emergency Helplines (India) -->
+      <section class="glass-tile p-3.5 rounded-2xl animate-fade-in-up stagger-4">
+        <h2 class="font-headline text-[15px] font-semibold text-slate-800 mb-2.5 px-1">Emergency Helplines (India)</h2>
+        <div class="grid grid-cols-2 gap-2">
+          <a href="tel:100" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
+            <span class="font-body text-[12px] font-medium text-slate-700">👮 Police</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">100</span>
+          </a>
+          <a href="tel:101" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
+            <span class="font-body text-[12px] font-medium text-slate-700">🚒 Fire Dept</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">101</span>
+          </a>
+          <a href="tel:102" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
+            <span class="font-body text-[12px] font-medium text-slate-700">🚑 Ambulance</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">102</span>
+          </a>
+          <a href="tel:108" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
+            <span class="font-body text-[12px] font-medium text-slate-700">🏥 Disaster Med</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">108</span>
+          </a>
+          <a href="tel:1091" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
+            <span class="font-body text-[12px] font-medium text-slate-700">👩 Women</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">1091</span>
+          </a>
+          <a href="tel:1078" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
+            <span class="font-body text-[12px] font-medium text-slate-700">🚨 Disaster</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">1078</span>
+          </a>
+          <a href="tel:1098" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
+            <span class="font-body text-[12px] font-medium text-slate-700">👶 Child Help</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">1098</span>
+          </a>
+          <a href="tel:14567" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
+            <span class="font-body text-[12px] font-medium text-slate-700">👵 Senior Citizen</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">14567</span>
           </a>
         </div>
-        <div class="form-group" style="margin-top: 1.5rem;">
-          <label for="api-key-input">Google Maps API Key (Masked & Protected):</label>
-          <div class="input-group">
-            <input type="password" id="api-key-input" placeholder="••••••••••••••••••••••••••••" autocomplete="off" spellcheck="false">
-            <button type="button" id="toggle-key-visibility" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; width: auto;" title="Toggle Visibility">
-              <span id="key-toggle-icon">👁️ Show</span>
-            </button>
-          </div>
-          <small>Key is masked for privacy. Server proxy and domain referrer restrictions protect your key automatically.</small>
-        </div>
-        <div class="form-group">
-          <label for="map-id-input">Map ID (For 3D Vector Advanced Markers):</label>
-          <input type="text" id="map-id-input" value="DEMO_MAP_ID" autocomplete="off">
-          <small>Leave as <code>DEMO_MAP_ID</code> to test Advanced Markers without cloud setup (prevents CF9 map error).</small>
-        </div>
+      </section>
+    </div>
+  </aside>
+
+  <!-- 3. MAP CONTROLS & FLOATING SOS BUTTON -->
+  <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-30 flex flex-col gap-3 items-end pointer-events-auto">
+    <button id="map-location-btn" class="w-11 h-11 glass-panel rounded-2xl p-2.5 interactive-element shadow-lg border-white/60 hover:bg-white/80 text-slate-700 flex items-center justify-center" title="Center on My Location">
+      <span class="material-symbols-outlined text-[20px]">near_me</span>
+    </button>
+    <button id="sos-btn" class="w-16 h-16 rounded-full bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-bold text-xs shadow-2xl interactive-element flex flex-col items-center justify-center border-2 border-white/90" title="Trigger Emergency SOS Broadcast">
+      <span class="material-symbols-outlined text-xl mb-0.5">sos</span>
+      <span class="tracking-widest font-extrabold text-[11px]">SOS</span>
+    </button>
+  </div>
+
+  <!-- Mobile Bottom Nav Bar -->
+  <nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pt-2 glass-panel rounded-t-3xl pb-6 border-t border-white/50">
+    <a class="flex flex-col items-center justify-center text-primary rounded-full px-4 py-2 transition-all" href="#">
+      <span class="material-symbols-outlined mb-1 text-[22px]">location_on</span>
+      <span class="font-body text-[11px] font-medium">Locator</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-4 py-2" href="#" onclick="document.getElementById('health-modal').showModal(); return false;">
+      <span class="material-symbols-outlined mb-1 text-[22px]">favorite</span>
+      <span class="font-body text-[11px] font-medium">Health</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-4 py-2" href="#places-feed">
+      <span class="material-symbols-outlined mb-1 text-[22px]">list_alt</span>
+      <span class="font-body text-[11px] font-medium">Results</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-4 py-2" href="#" onclick="document.getElementById('settings-modal').showModal(); return false;">
+      <span class="material-symbols-outlined mb-1 text-[22px]">settings</span>
+      <span class="font-body text-[11px] font-medium">Settings</span>
+    </a>
+  </nav>
+
+  <!-- ============================================================================ -->
+  <!-- MODALS & OVERLAYS                                                            -->
+  <!-- ============================================================================ -->
+
+  <!-- 0. SOS Emergency Modal & Contact Vault -->
+  <dialog id="sos-modal" class="rounded-3xl p-6 glass-panel border border-white/60 shadow-2xl max-w-lg w-full">
+    <div class="flex justify-between items-center mb-3">
+      <div>
+        <h3 class="text-xl font-bold text-red-600 flex items-center gap-2">
+          <span class="material-symbols-outlined text-red-600">sos</span> Emergency SOS & Contacts
+        </h3>
+        <p class="text-xs text-slate-500">Manage emergency contacts and broadcast live GPS tracking.</p>
       </div>
-      <footer class="modal-footer">
-        <button id="save-settings-btn" class="btn btn-primary btn-save">
-          <span>💾 Save & Launch Map Engine</span>
+      <button id="close-sos-modal" class="text-slate-400 hover:text-slate-600">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="flex flex-col gap-4 text-sm max-h-[70vh] overflow-y-auto custom-scroll pr-1">
+      
+      <!-- Stored Emergency Contacts List -->
+      <div class="p-3.5 rounded-2xl bg-white/60 border border-slate-200/80 space-y-2">
+        <div class="flex justify-between items-center">
+          <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+            <span>👥 Saved Emergency Contacts</span>
+          </h4>
+          <span id="sos-contact-count" class="text-[11px] font-semibold text-slate-500">0 contacts</span>
+        </div>
+        <ul id="sos-contacts-list" class="space-y-2 pt-1">
+          <li class="p-3 rounded-xl bg-white/40 text-center text-xs text-slate-400 border border-slate-200">No emergency contacts saved yet. Add one below!</li>
+        </ul>
+      </div>
+
+      <!-- Add New Emergency Contact Form -->
+      <form id="add-sos-contact-form" class="p-3.5 rounded-2xl bg-white/60 border border-slate-200/80 space-y-2.5">
+        <h4 class="font-bold text-slate-800 text-xs">➕ Add New Emergency Contact</h4>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label for="sos-new-name" class="block text-[11px] font-semibold text-slate-600 mb-0.5">Contact Name *</label>
+            <input type="text" id="sos-new-name" placeholder="e.g. Mom, Dr. Sharma" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 outline-none" required>
+          </div>
+          <div>
+            <label for="sos-new-phone" class="block text-[11px] font-semibold text-slate-600 mb-0.5">Phone Number *</label>
+            <input type="tel" id="sos-new-phone" placeholder="e.g. +91 98765 43210" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 outline-none" required>
+          </div>
+        </div>
+        <button type="submit" class="w-full py-2 rounded-xl bg-slate-800 text-white font-bold text-xs shadow hover:bg-slate-900 transition">
+          + Save Contact to SOS Vault
         </button>
-      </footer>
+      </form>
+
+      <!-- Active Target Phone Number -->
+      <div>
+        <label for="sos-phone" class="block font-semibold text-slate-700 mb-1 text-xs">📞 Selected SOS Recipient Phone Number:</label>
+        <input type="tel" id="sos-phone" placeholder="Selected contact number" class="w-full px-4 py-2.5 rounded-xl bg-white/80 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800 text-xs font-semibold">
+      </div>
+
+      <div class="flex flex-col gap-2 pt-1">
+        <button id="sos-confirm-btn" class="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold text-sm shadow-lg hover:opacity-95 transition">
+          🚨 ACTIVATE LIVE SOS BROADCAST
+        </button>
+        <button id="sos-modal-cancel" class="w-full py-2.5 rounded-xl glass-panel text-slate-700 font-semibold text-xs border border-slate-200 hover:bg-white/80">
+          ✕ Cancel
+        </button>
+      </div>
     </div>
   </dialog>
 
-  <!-- My Health Profile Modal (Combined Medical ID & Health Records) -->
-  <dialog id="health-modal" class="glass-modal">
-    <div class="modal-content health-modal-content">
-      <header class="modal-header">
-        <div class="modal-title-wrap">
-          <h2>🩺 My Health Profile</h2>
-          <p class="subtitle">Manage your Medical ID, track illnesses, upload prescriptions, and set doctor reminders</p>
-        </div>
-        <button id="close-health-modal" class="btn-close" aria-label="Close health modal">&times;</button>
-      </header>
+  <!-- 1. Settings & API Config Modal -->
+  <dialog id="settings-modal" class="rounded-3xl p-6 glass-panel border border-white/60 shadow-2xl max-w-md w-full">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold text-slate-800">App Settings</h3>
+      <button id="close-settings-modal" class="text-slate-400 hover:text-slate-600">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="flex flex-col gap-4 text-sm">
+      <div>
+        <label for="api-key-input" class="block font-semibold text-slate-700 mb-1">Google Maps API Key</label>
+        <input type="password" id="api-key-input" placeholder="Enter API Key" class="w-full px-4 py-2.5 rounded-xl bg-white/70 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary text-slate-800">
+      </div>
+      <div>
+        <label for="map-id-input" class="block font-semibold text-slate-700 mb-1">Map ID (Optional)</label>
+        <input type="text" id="map-id-input" placeholder="DEMO_MAP_ID" class="w-full px-4 py-2.5 rounded-xl bg-white/70 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary text-slate-800">
+      </div>
+      <button id="save-settings-btn" class="mt-2 w-full py-3 rounded-xl bg-primary text-white font-bold text-sm shadow-md hover:bg-blue-700 transition">
+        Save & Restart Engine
+      </button>
+    </div>
+  </dialog>
 
-      <!-- Navigation Sub-tabs -->
-      <div class="health-nav-tabs">
-        <button class="health-tab-btn active" data-tab="medical-profile">👤 Medical ID</button>
-        <button class="health-tab-btn" data-tab="illness-log">🤒 Illness History</button>
-        <button class="health-tab-btn" data-tab="prescription-vault">📜 Prescription Vault</button>
-        <button class="health-tab-btn" data-tab="doctor-reminders">🗓️ Doctor Reminders</button>
+  <!-- 2. Location Change Modal -->
+  <dialog id="location-modal" class="rounded-3xl p-6 glass-panel border border-white/60 shadow-2xl max-w-md w-full">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold text-slate-800">Set Custom Location</h3>
+      <button id="close-location-modal" class="text-slate-400 hover:text-slate-600">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="flex flex-col gap-4 text-sm">
+      <div>
+        <label for="custom-location-input" class="block font-semibold text-slate-700 mb-1">City, Landmark or Address</label>
+        <input type="text" id="custom-location-input" placeholder="e.g. Patna, Bihar or Connaught Place, Delhi" class="w-full px-4 py-2.5 rounded-xl bg-white/70 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary text-slate-800">
+      </div>
+      <p id="location-error-text" class="text-xs text-red-500 hidden"></p>
+      <div class="flex gap-2">
+        <button id="search-location-btn" class="flex-1 py-2.5 rounded-xl bg-primary text-white font-bold text-sm shadow-md hover:bg-blue-700 transition">
+          Scan Location
+        </button>
+        <button id="retry-gps-btn" class="px-4 py-2.5 rounded-xl glass-panel text-slate-700 font-semibold border border-white/50 hover:bg-white/80">
+          Use GPS
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 3. Place Details Modal -->
+  <dialog id="place-modal" class="rounded-3xl p-6 glass-panel border border-white/60 shadow-2xl max-w-lg w-full">
+    <div class="flex justify-between items-start mb-3">
+      <div>
+        <h3 id="modal-place-title" class="text-2xl font-bold text-slate-800">Emergency Facility</h3>
+        <p id="modal-place-address" class="text-sm text-slate-500 mt-0.5">Address loading...</p>
+      </div>
+      <button id="close-place-modal" class="text-slate-400 hover:text-slate-600">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="flex flex-wrap gap-2 mb-4 text-xs font-semibold">
+      <span id="modal-place-status" class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">Open Now</span>
+      <span id="modal-place-distance" class="px-3 py-1 rounded-full bg-blue-100 text-blue-800">1.2 km away</span>
+      <span id="modal-place-rating" class="px-3 py-1 rounded-full bg-amber-100 text-amber-800">⭐ 4.5</span>
+    </div>
+    <div class="flex flex-col gap-2 mb-6 text-sm text-slate-700">
+      <div id="modal-place-phone" class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-slate-400">call</span>
+        <span>Phone N/A</span>
+      </div>
+      <div id="modal-place-website" class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-slate-400">language</span>
+        <span>Website N/A</span>
+      </div>
+    </div>
+    <button id="modal-route-btn" class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-bold text-sm shadow-lg hover:opacity-95 transition">
+      ⚡ Get Live Traffic Route
+    </button>
+  </dialog>
+
+  <!-- 4. FULL HEALTH PROFILE & PRESCRIPTION VAULT MODAL (4 Tabs) -->
+  <dialog id="health-modal" class="rounded-3xl p-6 glass-panel border border-white/60 shadow-2xl max-w-2xl w-full">
+    <div class="flex justify-between items-center mb-4">
+      <div>
+        <h3 class="text-2xl font-bold text-slate-800">🩺 My Health Profile</h3>
+        <p class="text-xs text-slate-500">Manage Medical ID, Prescription Vault, Illness Log, and Doctor Reminders</p>
+      </div>
+      <button id="close-health-modal" onclick="document.getElementById('health-modal').close()" class="text-slate-400 hover:text-slate-600">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Health Nav Sub-Tabs -->
+    <div class="health-nav-tabs flex gap-2 border-b border-slate-200/60 pb-3 mb-4 overflow-x-auto no-scrollbar">
+      <button class="health-tab-btn active" data-tab="medical-profile">👤 Medical ID</button>
+      <button class="health-tab-btn" data-tab="illness-log">🤒 Illness History</button>
+      <button class="health-tab-btn" data-tab="prescription-vault">📜 Prescription Vault</button>
+      <button class="health-tab-btn" data-tab="doctor-reminders">🗓️ Doctor Reminders</button>
+    </div>
+
+    <div class="health-body max-h-[65vh] overflow-y-auto custom-scroll pr-1 text-sm">
+      <!-- TAB 1: Medical ID (Profile) -->
+      <div id="tab-medical-profile" class="health-tab-pane active space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="profile-name" class="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
+            <input type="text" id="profile-name" placeholder="e.g. Pratyush Raj" class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200">
+          </div>
+          <div>
+            <label for="profile-age" class="block text-xs font-semibold text-slate-600 mb-1">Age</label>
+            <input type="number" id="profile-age" placeholder="e.g. 25" class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200">
+          </div>
+          <div>
+            <label for="profile-blood" class="block text-xs font-semibold text-slate-600 mb-1">Blood Group</label>
+            <select id="profile-blood" class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200">
+              <option value="">Select</option>
+              <option>A+</option><option>A-</option>
+              <option>B+</option><option>B-</option>
+              <option>AB+</option><option>AB-</option>
+              <option>O+</option><option>O-</option>
+            </select>
+          </div>
+          <div>
+            <label for="profile-emergency-contact" class="block text-xs font-semibold text-slate-600 mb-1">Emergency Contact No.</label>
+            <input type="tel" id="profile-emergency-contact" placeholder="e.g. +91 98765 43210" class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200">
+          </div>
+          <div>
+            <label for="profile-height" class="block text-xs font-semibold text-slate-600 mb-1">Height (cm)</label>
+            <input type="number" id="profile-height" placeholder="e.g. 175" class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200">
+          </div>
+          <div>
+            <label for="profile-weight" class="block text-xs font-semibold text-slate-600 mb-1">Weight (kg)</label>
+            <input type="number" id="profile-weight" placeholder="e.g. 70" class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200">
+          </div>
+        </div>
+
+        <div>
+          <label for="profile-allergies" class="block text-xs font-semibold text-slate-600 mb-1">⚠️ Known Allergies</label>
+          <textarea id="profile-allergies" rows="2" placeholder="e.g. Penicillin, Peanuts, Latex..." class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200"></textarea>
+        </div>
+        <div>
+          <label for="profile-conditions" class="block text-xs font-semibold text-slate-600 mb-1">🩻 Chronic Conditions</label>
+          <textarea id="profile-conditions" rows="2" placeholder="e.g. Asthma, Diabetes Type 2..." class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200"></textarea>
+        </div>
+        <div>
+          <label for="profile-medications" class="block text-xs font-semibold text-slate-600 mb-1">💊 Current Medications</label>
+          <textarea id="profile-medications" rows="2" placeholder="e.g. Metformin 500mg twice daily..." class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200"></textarea>
+        </div>
+        <div>
+          <label for="profile-notes" class="block text-xs font-semibold text-slate-600 mb-1">📝 Additional Notes</label>
+          <textarea id="profile-notes" rows="2" placeholder="e.g. Organ donor, wears contact lenses..." class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200"></textarea>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-2">
+          <button id="save-profile-btn" class="px-5 py-2.5 rounded-xl bg-primary text-white font-bold text-xs shadow-md hover:bg-blue-700 transition">💾 Save Profile</button>
+          <button id="copy-profile-btn" class="px-4 py-2.5 rounded-xl glass-panel text-slate-700 font-semibold text-xs border border-slate-200">📋 Copy Info</button>
+          <button id="share-profile-btn" class="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-xs shadow-md">📲 Share WhatsApp</button>
+        </div>
       </div>
 
-      <div class="modal-body health-body">
-        <!-- TAB 1: Medical ID (Profile) -->
-        <div id="tab-medical-profile" class="health-tab-pane active">
-          <p class="settings-intro" style="margin-bottom:1rem;">Store your critical medical info locally on this device. Share it instantly with emergency responders or family.</p>
-          
-          <div class="profile-grid">
-            <div class="form-group">
-              <label for="profile-name">Full Name</label>
-              <input type="text" id="profile-name" placeholder="e.g., Pratyush Raj">
+      <!-- TAB 2: Illness Log -->
+      <div id="tab-illness-log" class="health-tab-pane space-y-4">
+        <form id="add-illness-form" class="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-3">
+          <h4 class="font-bold text-slate-800 text-xs">➕ Log New Illness / Health Incident</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="illness-name" class="block text-xs font-semibold text-slate-600 mb-1">Illness Name *</label>
+              <input type="text" id="illness-name" placeholder="e.g. Seasonal Flu, Typhoid" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs" required>
             </div>
-            <div class="form-group">
-              <label for="profile-age">Age</label>
-              <input type="number" id="profile-age" placeholder="e.g., 25" min="0" max="150">
+            <div>
+              <label for="illness-date" class="block text-xs font-semibold text-slate-600 mb-1">Date Diagnosed *</label>
+              <input type="date" id="illness-date" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs" required>
             </div>
-            <div class="form-group">
-              <label for="profile-blood">Blood Group</label>
-              <select id="profile-blood">
-                <option value="">Select</option>
-                <option>A+</option><option>A-</option>
-                <option>B+</option><option>B-</option>
-                <option>AB+</option><option>AB-</option>
-                <option>O+</option><option>O-</option>
+          </div>
+          <div>
+            <label for="illness-symptoms" class="block text-xs font-semibold text-slate-600 mb-1">Symptoms Experienced</label>
+            <input type="text" id="illness-symptoms" placeholder="e.g. High fever 102F, body ache" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="illness-status" class="block text-xs font-semibold text-slate-600 mb-1">Recovery Status</label>
+              <select id="illness-status" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs">
+                <option value="Recovered">🟢 Fully Recovered</option>
+                <option value="Ongoing">🟡 Ongoing Treatment</option>
+                <option value="Chronic">🔴 Chronic Condition</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="profile-height">Height (cm)</label>
-              <input type="number" id="profile-height" placeholder="e.g., 175" min="0">
-            </div>
-            <div class="form-group">
-              <label for="profile-weight">Weight (kg)</label>
-              <input type="number" id="profile-weight" placeholder="e.g., 70" min="0">
-            </div>
-            <div class="form-group">
-              <label for="profile-emergency-contact">Emergency Contact No.</label>
-              <input type="tel" id="profile-emergency-contact" placeholder="e.g., +91 98765 43210">
-            </div>
-            <div class="form-group" style="grid-column: span 2;">
-              <label for="profile-sos-message">📝 Custom SOS Message (optional)</label>
-              <input type="text" id="profile-sos-message" placeholder="e.g., I need immediate help!">
+            <div>
+              <label for="illness-doctor" class="block text-xs font-semibold text-slate-600 mb-1">Treating Doctor</label>
+              <input type="text" id="illness-doctor" placeholder="e.g. Dr. Sharma (AIIMS Patna)" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs">
             </div>
           </div>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs shadow-md">+ Save Illness Record</button>
+        </form>
 
-          <div class="form-group" style="margin-top:0.75rem;">
-            <label for="profile-allergies">⚠️ Known Allergies</label>
-            <textarea id="profile-allergies" rows="2" placeholder="e.g., Penicillin, Peanuts, Latex..."></textarea>
+        <h4 class="font-bold text-slate-800 text-xs pt-2">📜 Medical Incident History</h4>
+        <ul id="illness-history-list" class="space-y-2">
+          <li class="p-4 rounded-xl bg-white/40 text-center text-xs text-slate-400 border border-slate-200">No illness records logged yet.</li>
+        </ul>
+      </div>
+
+      <!-- TAB 3: Prescription Vault -->
+      <div id="tab-prescription-vault" class="health-tab-pane space-y-4">
+        <form id="add-prescription-form" class="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-3">
+          <h4 class="font-bold text-slate-800 text-xs">➕ Upload Prescription Record</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="rx-title" class="block text-xs font-semibold text-slate-600 mb-1">Prescription Title / Doctor *</label>
+              <input type="text" id="rx-title" placeholder="e.g. Dr. Mehta - Antibiotics" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs" required>
+            </div>
+            <div>
+              <label for="rx-date" class="block text-xs font-semibold text-slate-600 mb-1">Date *</label>
+              <input type="date" id="rx-date" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs" required>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="profile-conditions">🩻 Medical Conditions / Chronic Illnesses</label>
-            <textarea id="profile-conditions" rows="2" placeholder="e.g., Asthma, Diabetes Type 2, Hypertension..."></textarea>
+          <div>
+            <label for="rx-medicines" class="block text-xs font-semibold text-slate-600 mb-1">Medications & Dosage</label>
+            <textarea id="rx-medicines" rows="2" placeholder="e.g. Paracetamol 650mg TDS x 5 days" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs"></textarea>
           </div>
-          <div class="form-group">
-            <label for="profile-medications">💊 Current Medications</label>
-            <textarea id="profile-medications" rows="2" placeholder="e.g., Metformin 500mg twice daily..."></textarea>
+          <div>
+            <label for="rx-file" class="block text-xs font-semibold text-slate-600 mb-1">📎 Upload Prescription File (JPEG, PNG, PDF)</label>
+            <input type="file" id="rx-file" accept="image/*,application/pdf" class="w-full text-xs text-slate-500">
           </div>
-          <div class="form-group">
-            <label for="profile-notes">📝 Additional Notes</label>
-            <textarea id="profile-notes" rows="2" placeholder="e.g., Organ donor, wears contact lenses..."></textarea>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs shadow-md">+ Upload Prescription</button>
+        </form>
+
+        <h4 class="font-bold text-slate-800 text-xs pt-2">📂 Stored Prescription Vault</h4>
+        <ul id="prescription-list" class="space-y-2">
+          <li class="p-4 rounded-xl bg-white/40 text-center text-xs text-slate-400 border border-slate-200">No prescription records uploaded yet.</li>
+        </ul>
+      </div>
+
+      <!-- TAB 4: Doctor Visit Reminders -->
+      <div id="tab-doctor-reminders" class="health-tab-pane space-y-4">
+        <form id="add-reminder-form" class="p-4 rounded-2xl bg-white/60 border border-slate-200 space-y-3">
+          <h4 class="font-bold text-slate-800 text-xs">⏰ Schedule Doctor Visit & Reminder</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="rem-doctor" class="block text-xs font-semibold text-slate-600 mb-1">Doctor / Clinic Name *</label>
+              <input type="text" id="rem-doctor" placeholder="e.g. Dr. Verma (Cardiologist)" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs" required>
+            </div>
+            <div>
+              <label for="rem-date" class="block text-xs font-semibold text-slate-600 mb-1">Appointment Date & Time *</label>
+              <input type="datetime-local" id="rem-date" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs" required>
+            </div>
           </div>
-
-          <div class="health-form-box" style="margin-top: 1rem; padding: 0.75rem; display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap;">
-            <button id="save-profile-btn" class="btn btn-primary">💾 Save Profile</button>
-            <button id="copy-profile-btn" class="btn btn-secondary">📋 Copy Info</button>
-            <button id="share-profile-btn" class="btn btn-whatsapp">📲 Share via WhatsApp</button>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="rem-recurrence" class="block text-xs font-semibold text-slate-600 mb-1">Reminder Recurrence</label>
+              <select id="rem-recurrence" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs">
+                <option value="One-time">One-time Visit</option>
+                <option value="Monthly">🗓️ Monthly Check-up</option>
+                <option value="Quarterly">🗓️ Quarterly (Every 3 Months)</option>
+                <option value="Half-Yearly">🗓️ Half-Yearly (Every 6 Months)</option>
+                <option value="Yearly">🗓️ Yearly Check-up</option>
+              </select>
+            </div>
+            <div>
+              <label for="rem-notes" class="block text-xs font-semibold text-slate-600 mb-1">Visit Notes</label>
+              <input type="text" id="rem-notes" placeholder="e.g. Fasting blood test" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs">
+            </div>
           </div>
-        </div>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs shadow-md">+ Save Reminder</button>
+        </form>
 
-        <!-- TAB 2: Illness Log -->
-        <div id="tab-illness-log" class="health-tab-pane">
-          <form id="add-illness-form" class="health-form-box">
-            <h4>➕ Log New Illness / Health Incident</h4>
-            <div class="profile-grid">
-              <div class="form-group">
-                <label for="illness-name">Illness / Condition Name *</label>
-                <input type="text" id="illness-name" placeholder="e.g., Seasonal Flu, Migraine, Typhoid" required>
-              </div>
-              <div class="form-group">
-                <label for="illness-date">Date Sick / Diagnosed *</label>
-                <input type="date" id="illness-date" required>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="illness-symptoms">Symptoms Experienced</label>
-              <input type="text" id="illness-symptoms" placeholder="e.g., High fever 102F, body ache, sore throat">
-            </div>
-            <div class="profile-grid">
-              <div class="form-group">
-                <label for="illness-status">Recovery Status</label>
-                <select id="illness-status">
-                  <option value="Recovered">🟢 Fully Recovered</option>
-                  <option value="Ongoing">🟡 Ongoing / Under Treatment</option>
-                  <option value="Chronic">🔴 Chronic Condition</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="illness-doctor">Treating Doctor / Hospital</label>
-                <input type="text" id="illness-doctor" placeholder="e.g., Dr. Sharma (AIIMS Patna)">
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">+ Save Illness Record</button>
-          </form>
-
-          <h4 style="margin: 1.25rem 0 0.5rem;">📜 Medical Incident History</h4>
-          <ul id="illness-history-list" class="health-card-list">
-            <li class="empty-health-card">No illness records logged yet. Add your first record above!</li>
-          </ul>
-        </div>
-
-        <!-- TAB 2: Prescription Vault -->
-        <div id="tab-prescription-vault" class="health-tab-pane">
-          <form id="add-prescription-form" class="health-form-box">
-            <h4>➕ Upload Prescription Record</h4>
-            <div class="profile-grid">
-              <div class="form-group">
-                <label for="rx-title">Prescription Title / Doctor *</label>
-                <input type="text" id="rx-title" placeholder="e.g., Dr. Mehta - Antibiotics & Blood Test" required>
-              </div>
-              <div class="form-group">
-                <label for="rx-date">Prescription / Upload Date *</label>
-                <input type="date" id="rx-date" required>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="rx-medicines">Prescribed Medications & Dosage</label>
-              <textarea id="rx-medicines" rows="2" placeholder="e.g., Paracetamol 650mg TDS x 5 days, Azithromycin 500mg OD x 3 days"></textarea>
-            </div>
-            <div class="form-group">
-              <label for="rx-file">📎 Upload Prescription Document / Photo (JPEG, PNG, PDF)</label>
-              <input type="file" id="rx-file" accept="image/*,application/pdf">
-              <small>Files are stored securely on your local device storage.</small>
-            </div>
-            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">+ Upload & Save Prescription</button>
-          </form>
-
-          <h4 style="margin: 1.25rem 0 0.5rem;">📂 Stored Prescriptions</h4>
-          <ul id="prescription-list" class="health-card-list">
-            <li class="empty-health-card">No prescription records uploaded yet.</li>
-          </ul>
-        </div>
-
-        <!-- TAB 3: Doctor Visit Reminders -->
-        <div id="tab-doctor-reminders" class="health-tab-pane">
-          <form id="add-reminder-form" class="health-form-box">
-            <h4>⏰ Schedule Doctor Visit & Periodic Reminder</h4>
-            <div class="profile-grid">
-              <div class="form-group">
-                <label for="rem-doctor">Doctor / Clinic Name *</label>
-                <input type="text" id="rem-doctor" placeholder="e.g., Dr. Verma (Cardiologist)" required>
-              </div>
-              <div class="form-group">
-                <label for="rem-date">Next Appointment Date & Time *</label>
-                <input type="datetime-local" id="rem-date" required>
-              </div>
-            </div>
-            <div class="profile-grid">
-              <div class="form-group">
-                <label for="rem-recurrence">Reminder Frequency (Periodic)</label>
-                <select id="rem-recurrence">
-                  <option value="One-time">One-time Visit</option>
-                  <option value="Monthly">🗓️ Monthly Check-up</option>
-                  <option value="Quarterly">🗓️ Quarterly (Every 3 Months)</option>
-                  <option value="Half-Yearly">🗓️ Half-Yearly (Every 6 Months)</option>
-                  <option value="Yearly">🗓️ Yearly Annual Health Check-up</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="rem-notes">Visit Purpose / Instructions</label>
-                <input type="text" id="rem-notes" placeholder="e.g., Fasting blood test prior to visit">
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">+ Save Doctor Reminder</button>
-          </form>
-
-          <h4 style="margin: 1.25rem 0 0.5rem;">🔔 Upcoming Doctor Check-ups & Reminders</h4>
-          <ul id="reminders-list" class="health-card-list">
-            <li class="empty-health-card">No upcoming doctor reminders set.</li>
-          </ul>
-        </div>
+        <h4 class="font-bold text-slate-800 text-xs pt-2">🔔 Upcoming Doctor Check-ups</h4>
+        <ul id="reminders-list" class="space-y-2">
+          <li class="p-4 rounded-xl bg-white/40 text-center text-xs text-slate-400 border border-slate-200">No upcoming doctor reminders set.</li>
+        </ul>
       </div>
     </div>
   </dialog>
 
-  <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
-  <script defer src="app.js"></script>
+  <!-- 5. Navigation Route HUD -->
+  <div id="route-hud" class="fixed top-16 left-1/2 -translate-x-1/2 z-40 glass-panel rounded-2xl px-5 py-2.5 border border-white/60 shadow-xl hidden flex items-center gap-5">
+    <div>
+      <h4 id="hud-dest-name" class="font-bold text-slate-800 text-xs">Navigating...</h4>
+      <p class="text-[11px] text-slate-500"><span id="hud-eta">-- min</span> (<span id="hud-dist">-- km</span>) • <span id="hud-traffic-status" class="text-emerald-600 font-semibold">Normal Traffic</span></p>
+    </div>
+    <button id="close-hud-btn" class="p-1 rounded-full text-slate-400 hover:text-slate-600">
+      <span class="material-symbols-outlined text-xs">close</span>
+    </button>
+  </div>
+
+  <!-- Hidden mechanics elements -->
+  <div id="turn-steps-box" class="hidden"></div>
+  <div id="turn-steps-list" class="hidden"></div>
+  <div id="quote-text" class="hidden"></div>
+  <button id="sos-cancel-btn" class="hidden"></button>
+  <div id="sos-status-bar" class="hidden"></div>
+  <button id="start-nav-btn" class="hidden"></button>
+  <button id="exit-nav-btn" class="hidden"></button>
+  <div id="nav-overlay" class="hidden"></div>
+  <div id="offline-banner" class="hidden"></div>
+
+  <!-- Engine Script -->
+  <script src="app.js"></script>
 </body>
 </html>

@@ -417,7 +417,7 @@ function renderMap() {
     zoom: 13,
     mapId: state.mapId, // Mandatory for AdvancedMarkerElement (CF9)
     disableDefaultUI: true,
-    zoomControl: true,
+    zoomControl: false,
     gestureHandling: "greedy"
   });
 
@@ -959,14 +959,15 @@ function renderPlaceCard(place, index) {
   const distKm = (getApproxDistance(state.userLocation, place.location) / 1000).toFixed(1);
   const isOpen = place.currentOpeningHours ? place.currentOpeningHours.openNow : null;
   
-  let statusHTML = `<span class="badge-status">Status N/A</span>`;
-  if (isOpen === true) statusHTML = `<span class="badge-status badge-open">🟢 Open Now</span>`;
-  if (isOpen === false) statusHTML = `<span class="badge-status badge-closed">🔴 Closed</span>`;
+  let statusText = "N/A";
+  let statusClass = "text-slate-500 font-medium";
+  if (isOpen === true) { statusText = "Open Now"; statusClass = "text-emerald-600 font-bold"; }
+  if (isOpen === false) { statusText = "Closed"; statusClass = "text-rose-600 font-bold"; }
 
   const li = document.createElement("li");
-  li.className = "place-card animate-in";
+  li.className = "glass-panel interactive-element rounded-xl p-2.5 px-3 flex flex-col gap-1 border-white/60 shadow-sm animate-fade-in-up cursor-pointer hover:bg-white/80 transition-all";
   li.setAttribute("data-type", state.currentCategory);
-  li.style.animationDelay = `${Math.min(index * 70, 420)}ms`;
+  li.style.animationDelay = `${Math.min(index * 50, 300)}ms`;
   const phoneNum = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
 
   let placeName = "Emergency Unit";
@@ -979,27 +980,18 @@ function renderPlaceCard(place, index) {
   }
 
   li.innerHTML = `
-    <div class="card-top">
-      <h3>${placeName}</h3>
-      ${statusHTML}
+    <div class="flex justify-between items-center gap-2">
+      <h3 class="font-headline text-[13.5px] font-bold text-slate-800 truncate flex-1 leading-snug" title="${placeName}">${placeName}</h3>
+      <span class="font-headline text-[11px] ${statusClass} shrink-0 px-2 py-0.5 rounded-full bg-white/70 border border-white/80">${statusText}</span>
     </div>
-    <div class="card-body">
-      <p class="card-address">📫 ${place.formattedAddress || "Address not available"}</p>
-    </div>
-    <div class="card-contact">
-      ${phoneNum ? `<a href="tel:${phoneNum}" class="contact-chip phone-chip" onclick="event.stopPropagation();" title="Call now">
-        <span>📞</span> ${phoneNum}
-      </a>` : ""}
-      ${place.websiteURI ? `<a href="${place.websiteURI}" target="_blank" rel="noopener noreferrer" class="contact-chip web-chip" onclick="event.stopPropagation();" title="Visit website">
-        <span>🌐</span> Website
-      </a>` : ""}
-    </div>
-    <div class="card-footer">
-      <div class="card-metrics">
-        <span class="dist-badge">📍 ${distKm} km away</span>
-        ${place.rating ? `<span class="rating-badge">⭐ ${place.rating} (${place.userRatingCount || 0})</span>` : ""}
+    <p class="font-body text-[11.5px] text-slate-500 truncate leading-tight">${place.formattedAddress || "Address unavailable"}</p>
+    <div class="flex items-center justify-between gap-2 mt-0.5 pt-1 border-t border-slate-200/40">
+      <div class="flex items-center gap-2 text-[11.5px] text-slate-700 font-semibold whitespace-nowrap">
+        <span>📍 ${distKm} km</span>
+        ${place.rating ? `<span class="text-amber-600 font-bold">⭐ ${place.rating}</span>` : ""}
+        ${phoneNum ? `<a href="tel:${phoneNum}" class="text-blue-600 hover:underline flex items-center" onclick="event.stopPropagation();" title="Call ${phoneNum}"><span class="material-symbols-outlined text-[14px]">call</span></a>` : ""}
       </div>
-      <button class="btn btn-route" data-index="${index}" aria-label="Navigate to ${placeName}">
+      <button class="btn-route px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-headline text-[11px] font-bold shadow-sm hover:shadow hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 flex items-center gap-1 border border-white/30" data-index="${index}">
         <span>⚡ Quick Route</span>
       </button>
     </div>
@@ -1425,11 +1417,24 @@ function setupEventListeners() {
     performNearbySearch();
   });
 
-  // GPS Rescan
-  DOM.rescanBtn.addEventListener("click", async () => {
-    await detectUserLocation();
-    performNearbySearch();
-  });
+  // GPS Rescan & Floating Arrow Button
+  if (DOM.rescanBtn) {
+    DOM.rescanBtn.addEventListener("click", async () => {
+      await detectUserLocation();
+      performNearbySearch();
+    });
+  }
+
+  const mapLocationBtn = document.getElementById("map-location-btn");
+  if (mapLocationBtn) {
+    mapLocationBtn.addEventListener("click", async () => {
+      await detectUserLocation();
+      if (state.map && state.userLocation) {
+        state.map.setCenter(state.userLocation);
+      }
+      performNearbySearch();
+    });
+  }
 
   // Location Modal Triggers & Custom Address Search
   if (DOM.openLocationModalBtn) {
@@ -1920,21 +1925,105 @@ function setupSOS() {
   const sosModalCancel = document.getElementById("sos-modal-cancel");
   const closeSosModal = document.getElementById("close-sos-modal");
 
+  const sosContactsList = document.getElementById("sos-contacts-list");
+  const addSosContactForm = document.getElementById("add-sos-contact-form");
+  const sosNewName = document.getElementById("sos-new-name");
+  const sosNewPhone = document.getElementById("sos-new-phone");
+  const sosContactCount = document.getElementById("sos-contact-count");
+
   if (!sosBtn || !sosModal) {
     console.warn("SOS elements not found in DOM");
     return;
   }
 
-  // Pre-fill from profile emergency contact
-  function refreshSOSPhone() {
+  function loadSOSContacts() {
     try {
-      const profile = JSON.parse(localStorage.getItem("RESQNOW_PROFILE") || "{}");
-      if (profile["profile-emergency-contact"] && sosPhone) {
-        sosPhone.value = profile["profile-emergency-contact"];
+      const saved = JSON.parse(localStorage.getItem("RESQNOW_SOS_CONTACTS") || "[]");
+      // Auto-import from profile if empty
+      if (saved.length === 0) {
+        const profile = JSON.parse(localStorage.getItem("RESQNOW_PROFILE") || "{}");
+        if (profile["profile-emergency-contact"]) {
+          const profileContact = {
+            name: profile["profile-name"] ? `${profile["profile-name"]}'s Primary Contact` : "Primary Emergency Contact",
+            phone: profile["profile-emergency-contact"],
+            id: Date.now()
+          };
+          saved.push(profileContact);
+          localStorage.setItem("RESQNOW_SOS_CONTACTS", JSON.stringify(saved));
+        }
       }
-    } catch(e) {}
+      return saved;
+    } catch(e) {
+      return [];
+    }
   }
-  refreshSOSPhone();
+
+  function saveSOSContacts(contacts) {
+    localStorage.setItem("RESQNOW_SOS_CONTACTS", JSON.stringify(contacts));
+  }
+
+  function renderSOSContacts() {
+    if (!sosContactsList) return;
+    const contacts = loadSOSContacts();
+    if (sosContactCount) sosContactCount.textContent = `${contacts.length} contact${contacts.length === 1 ? '' : 's'}`;
+
+    if (contacts.length === 0) {
+      sosContactsList.innerHTML = `<li class="p-3 rounded-xl bg-white/40 text-center text-xs text-slate-400 border border-slate-200">No emergency contacts saved yet. Add one below!</li>`;
+      return;
+    }
+
+    sosContactsList.innerHTML = contacts.map((c, i) => `
+      <li class="p-2.5 px-3 rounded-xl bg-white/70 border border-white/80 shadow-sm flex items-center justify-between gap-2 interactive-element cursor-pointer hover:bg-white/90" onclick="window.selectSOSContact('${c.phone}')">
+        <div class="flex items-center gap-2 overflow-hidden">
+          <span class="w-7 h-7 rounded-full bg-red-100 text-red-600 font-bold text-xs flex items-center justify-center shrink-0">👤</span>
+          <div class="truncate">
+            <span class="font-bold text-slate-800 text-xs block truncate">${c.name}</span>
+            <span class="text-[11px] text-slate-500 font-medium block truncate">📞 ${c.phone}</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button type="button" onclick="event.stopPropagation(); window.selectSOSContact('${c.phone}')" class="px-2.5 py-1 rounded-lg bg-red-600 text-white font-bold text-[11px] shadow-sm hover:bg-red-700 transition">Select</button>
+          <button type="button" onclick="event.stopPropagation(); window.deleteSOSContact(${i})" class="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition" title="Delete contact">
+            <span class="material-symbols-outlined text-[16px]">delete</span>
+          </button>
+        </div>
+      </li>
+    `).join('');
+
+    if (!sosPhone.value && contacts.length > 0) {
+      sosPhone.value = contacts[0].phone;
+    }
+  }
+
+  window.selectSOSContact = function(phone) {
+    if (sosPhone) sosPhone.value = phone;
+  };
+
+  window.deleteSOSContact = function(index) {
+    const contacts = loadSOSContacts();
+    contacts.splice(index, 1);
+    saveSOSContacts(contacts);
+    renderSOSContacts();
+  };
+
+  if (addSosContactForm) {
+    addSosContactForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = sosNewName.value.trim();
+      const phone = sosNewPhone.value.trim();
+      if (!name || !phone) return;
+
+      const contacts = loadSOSContacts();
+      contacts.push({ name, phone, id: Date.now() });
+      saveSOSContacts(contacts);
+      sosNewName.value = "";
+      sosNewPhone.value = "";
+      sosPhone.value = phone;
+      renderSOSContacts();
+    });
+  }
+
+  renderSOSContacts();
 
   sosBtn.addEventListener("click", (e) => {
     e.preventDefault();
@@ -1942,7 +2031,7 @@ function setupSOS() {
     if (state.sosActive) {
       deactivateSOS();
     } else {
-      refreshSOSPhone(); // Refresh phone number from profile each time
+      renderSOSContacts();
       try {
         if (!sosModal.open) sosModal.showModal();
       } catch(err) {
@@ -1956,7 +2045,7 @@ function setupSOS() {
 
   if (sosConfirm) sosConfirm.addEventListener("click", () => {
     const phone = sosPhone ? sosPhone.value.trim() : "";
-    if (!phone) { alert("Please enter a phone number."); return; }
+    if (!phone) { alert("Please select or enter an emergency contact number."); return; }
     state.sosPhoneNumber = phone;
     closeModalSmooth(sosModal);
     activateSOS();
