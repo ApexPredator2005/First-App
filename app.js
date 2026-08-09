@@ -122,22 +122,16 @@ async function loadStoredSettings() {
   if (DOM.mapIdInput) DOM.mapIdInput.value = savedMapId;
 }
 
-// Global Google Maps Auth Failure Handler (Triggers on domain restriction, quota error, or invalid key)
+// Global Google Maps Auth Failure Handler (Never switches to OSM)
 window.gm_authFailure = function() {
-  console.warn("Google Maps API authentication failed (Domain restriction or Key issue). Auto-switching to OpenStreetMap Engine...");
+  console.warn("Google Maps API authentication failed. Switching to Google Maps Embed Engine...");
   state.googleMapsAuthFailed = true;
   state.map = null;
-  if (DOM.mapContainer) {
-    DOM.mapContainer.innerHTML = "";
-  }
-  if (typeof renderLeafletMap === "function") {
-    renderLeafletMap();
+  if (typeof renderGoogleMapsEmbedFallback === "function") {
+    renderGoogleMapsEmbedFallback();
   }
   if (typeof performNearbySearch === "function") {
     performNearbySearch();
-  }
-  if (DOM.feedStatus) {
-    DOM.feedStatus.textContent = "Emergency Radar Active (OpenStreetMap Engine)";
   }
 };
 
@@ -443,12 +437,49 @@ function renderMap() {
         }
       });
     } catch (e) {
-      console.warn("Google Maps init error, falling back to OpenStreetMap:", e);
+      console.warn("Google Maps JS API init error, running Google Maps Embed Fallback:", e);
       state.googleMapsAuthFailed = true;
-      renderLeafletMap();
+      renderGoogleMapsEmbedFallback();
     }
-  } else if (window.L) {
-    renderLeafletMap();
+  } else {
+    renderGoogleMapsEmbedFallback();
+  }
+}
+
+// Google Maps Interactive Embed Fallback Engine — Guaranteed Google Maps on ALL domains & keys!
+function renderGoogleMapsEmbedFallback() {
+  const lat = state.userLocation ? state.userLocation.lat : 25.5941;
+  const lng = state.userLocation ? state.userLocation.lng : 85.1376;
+  
+  const iframe = document.getElementById("gmaps-embed-iframe");
+  if (iframe) {
+    iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed`;
+    return;
+  }
+
+  if (DOM.mapContainer) {
+    DOM.mapContainer.innerHTML = `
+      <div class="relative w-full h-full overflow-hidden">
+        <iframe 
+          id="gmaps-embed-iframe"
+          width="100%" 
+          height="100%" 
+          frameborder="0" 
+          style="border:0; width:100%; height:100%;" 
+          src="https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed" 
+          allowfullscreen>
+        </iframe>
+        
+        <!-- Google Maps Active Status Toast -->
+        <div class="absolute top-16 left-1/2 -translate-x-1/2 z-30 glass-panel px-4 py-1.5 rounded-full border border-white/80 shadow-lg flex items-center gap-2 text-xs font-bold text-slate-800">
+          <span class="text-blue-600 text-sm">📍</span>
+          <span>Google Maps Radar Active</span>
+        </div>
+      </div>
+    `;
+  }
+  if (DOM.feedStatus) {
+    DOM.feedStatus.textContent = "Google Maps Radar Active";
   }
 }
 
