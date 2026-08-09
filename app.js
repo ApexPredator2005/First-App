@@ -2052,6 +2052,195 @@ function setupSOS() {
   });
 
   if (sosCancel) sosCancel.addEventListener("click", () => deactivateSOS());
+
+  // ============================================================================
+  // Offline AI First-Aid Guide Protocols Engine
+  // ============================================================================
+  const FIRST_AID_PROTOCOLS = [
+    {
+      id: "cpr",
+      title: "🫀 CPR & Cardiac Arrest",
+      urgency: "🚨 CRITICAL - Immediate Action",
+      badgeClass: "bg-red-100 text-red-800 border-red-200",
+      keywords: "cpr heart attack cardiac arrest breathing pulse unconscious unresponsive chest compression",
+      steps: [
+        "Call emergency medical services immediately (Dial 102 or 108 in India).",
+        "Place victim flat on their back on a firm, flat surface.",
+        "Place heel of one hand in center of chest, place other hand on top and interlock fingers.",
+        "Push hard and fast (100–120 compressions/min) to the beat of 'Staying Alive'. Press down 2 inches.",
+        "If trained, give 2 rescue breaths after every 30 chest compressions until help arrives."
+      ],
+      donts: ["Do NOT delay compressions to check for pulse if person is unresponsive and not breathing."]
+    },
+    {
+      id: "bleeding",
+      title: "🩸 Severe Bleeding & Hemorrhage",
+      urgency: "🚨 HIGH - Rapid Action",
+      badgeClass: "bg-rose-100 text-rose-800 border-rose-200",
+      keywords: "bleeding blood hemorrhage wound cut artery injury blood loss",
+      steps: [
+        "Apply firm, direct pressure over wound using a clean cloth, bandage, or bare hands.",
+        "Elevate bleeding limb above heart level if no fracture is suspected.",
+        "Keep firm pressure applied continuously for at least 10–15 minutes without lifting cloth to check.",
+        "If bleeding soaks through cloth, add more cloths on top (do NOT remove original cloth).",
+        "Apply a tight tourniquet 2-3 inches above wound only if life-threatening limb arterial bleeding."
+      ],
+      donts: ["Do NOT remove embedded objects (knives, glass) from wound; pack around them."]
+    },
+    {
+      id: "choking",
+      title: "🫁 Choking (Heimlich Maneuver)",
+      urgency: "🚨 CRITICAL - Seconds Count",
+      badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
+      keywords: "choking choke air blocking cannot breathe throat obstruction heimlich",
+      steps: [
+        "Stand behind victim, wrap arms around their waist, and lean them slightly forward.",
+        "Make a fist with one hand, place thumb side against victim's stomach slightly above belly button.",
+        "Grasp fist with other hand and give quick, hard, upward abdominal thrusts.",
+        "Repeat thrusts until food/object is dislodged or person becomes unconscious.",
+        "If person becomes unconscious, lower to ground and begin CPR chest compressions."
+      ],
+      donts: ["Do NOT perform blind finger sweeps in mouth; you may push object deeper."]
+    },
+    {
+      id: "snakebite",
+      title: "🐍 Snakebite & Venomous Attack",
+      urgency: "⚠️ HIGH - Urgent Transport",
+      badgeClass: "bg-purple-100 text-purple-800 border-purple-200",
+      keywords: "snake snakebite venom viper cobra bite poison fang mark swelling",
+      steps: [
+        "Keep victim calm and completely still; movement speeds venom circulation.",
+        "Immobilize bitten limb using a loose splint and keep limb BELOW heart level.",
+        "Remove rings, watches, or tight clothing near bite before swelling starts.",
+        "Clean wound with clean water or soap gently and cover with clean dry dressing.",
+        "Transport immediately to hospital with Antivenom serum (AVS) availability."
+      ],
+      donts: [
+        "Do NOT cut bite mark, suck out venom with mouth, or apply ice/tourniquets.",
+        "Do NOT allow victim to drink alcohol, tea, coffee, or take aspirin."
+      ]
+    },
+    {
+      id: "burns",
+      title: "🔥 Severe Burns & Scalds",
+      urgency: "⚠️ HIGH - Infection & Shock Risk",
+      badgeClass: "bg-orange-100 text-orange-800 border-orange-200",
+      keywords: "burn fire scald boiling water chemical acid heat skin blister",
+      steps: [
+        "Cool burn immediately under cool, gently running water for 10–20 minutes.",
+        "Remove jewelry or loose clothing near burned area before swelling occurs.",
+        "Cover burn loosely with clean, non-stick sterile bandage or clean plastic wrap.",
+        "Keep victim warm with blanket to prevent shock if burn covers large area."
+      ],
+      donts: [
+        "Do NOT break blisters or apply ice, toothpaste, butter, oil, or ointments.",
+        "Do NOT pull away clothing stuck to burned skin."
+      ]
+    },
+    {
+      id: "electric",
+      title: "⚡ Electric Shock & Electrocution",
+      urgency: "🚨 CRITICAL - Danger",
+      badgeClass: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      keywords: "electric shock electrocution high voltage wire lightning current power",
+      steps: [
+        "Do NOT touch victim directly until power source is completely disconnected/switched off.",
+        "Use non-conductive object (dry wooden broomstick, plastic, cardboard) to separate victim from wire.",
+        "Check victim's breathing and responsiveness once safe.",
+        "If not breathing, begin CPR chest compressions immediately.",
+        "Cover electrical burn entrance and exit wounds with clean sterile cloths."
+      ],
+      donts: ["Do NOT approach high-voltage power lines until utility company cuts power."]
+    },
+    {
+      id: "fracture",
+      title: "🦴 Fractures & Bone Injuries",
+      urgency: "⚠️ MEDIUM - Immobilization Needed",
+      badgeClass: "bg-blue-100 text-blue-800 border-blue-200",
+      keywords: "bone fracture broken arm leg dislocation joint trauma accident fall",
+      steps: [
+        "Stop any visible bleeding with direct pressure before treating fracture.",
+        "Immobilize injured area in position found using a splint or padding.",
+        "Apply ice pack wrapped in cloth to reduce swelling and ease pain (15 mins on/off).",
+        "Keep victim calm and treat for shock by keeping them warm."
+      ],
+      donts: ["Do NOT try to push protruding bone back into skin or force joint into alignment."]
+    }
+  ];
+
+  // Render First Aid Protocols
+  const firstAidProtocolsList = document.getElementById("first-aid-protocols-list");
+  const firstAidSearchInput = document.getElementById("first-aid-search-input");
+
+  function renderFirstAidProtocols(filterQuery = "") {
+    if (!firstAidProtocolsList) return;
+    const q = filterQuery.toLowerCase().trim();
+
+    const filtered = FIRST_AID_PROTOCOLS.filter(p => {
+      if (!q) return true;
+      return p.title.toLowerCase().includes(q) || p.keywords.toLowerCase().includes(q) || p.steps.some(s => s.toLowerCase().includes(q));
+    });
+
+    if (filtered.length === 0) {
+      firstAidProtocolsList.innerHTML = `<div class="p-4 rounded-xl bg-white/50 text-center text-xs text-slate-500 border border-slate-200">No first-aid guide matching "${filterQuery}". Try searching CPR, bleeding, snakebite, burn, or choking.</div>`;
+      return;
+    }
+
+    firstAidProtocolsList.innerHTML = filtered.map(p => `
+      <div class="p-3.5 rounded-2xl bg-white/70 border border-white/80 shadow-sm space-y-2">
+        <div class="flex justify-between items-start gap-2">
+          <h4 class="font-bold text-slate-800 text-xs">${p.title}</h4>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${p.badgeClass}">${p.urgency}</span>
+        </div>
+        <div class="space-y-1 pt-1">
+          <span class="font-bold text-[11px] text-slate-700 block">Immediate Steps:</span>
+          <ol class="list-decimal list-inside space-y-1 text-xs text-slate-700 pl-1 leading-relaxed">
+            ${p.steps.map(s => `<li>${s}</li>`).join('')}
+          </ol>
+        </div>
+        ${p.donts && p.donts.length > 0 ? `
+          <div class="mt-2 p-2 rounded-xl bg-rose-50/80 border border-rose-100 text-[11px] text-rose-900">
+            <span class="font-bold block text-rose-700">⚠️ WHAT NOT TO DO:</span>
+            <ul class="list-disc list-inside space-y-0.5 mt-0.5">
+              ${p.donts.map(d => `<li>${d}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
+  }
+
+  renderFirstAidProtocols();
+
+  if (firstAidSearchInput) {
+    firstAidSearchInput.addEventListener("input", (e) => {
+      renderFirstAidProtocols(e.target.value);
+    });
+  }
+
+  // SOS Sub-Tabs Switching
+  const sosTabBtns = sosModal.querySelectorAll(".sos-tab-btn");
+  sosTabBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const targetTab = btn.getAttribute("data-tab");
+      sosTabBtns.forEach(b => {
+        b.classList.remove("active", "bg-red-50", "text-red-600", "border-red-200", "font-bold");
+        b.classList.add("bg-white/50", "text-slate-600", "border-slate-200", "font-semibold");
+      });
+      btn.classList.add("active", "bg-red-50", "text-red-600", "border-red-200", "font-bold");
+      btn.classList.remove("bg-white/50", "text-slate-600", "border-slate-200");
+
+      sosModal.querySelectorAll(".sos-tab-pane").forEach(pane => {
+        pane.classList.add("hidden");
+        pane.classList.remove("active");
+      });
+      const activePane = sosModal.querySelector(`#tab-${targetTab}`);
+      if (activePane) {
+        activePane.classList.remove("hidden");
+        activePane.classList.add("active");
+      }
+    });
+  });
 }
 
 function activateSOS() {

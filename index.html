@@ -231,66 +231,97 @@
   <!-- MODALS & OVERLAYS                                                            -->
   <!-- ============================================================================ -->
 
-  <!-- 0. SOS Emergency Modal & Contact Vault -->
-  <dialog id="sos-modal" class="rounded-3xl p-6 glass-panel border border-white/60 shadow-2xl max-w-lg w-full">
+  <!-- 0. SOS Emergency Modal, Contact Vault & Offline AI First-Aid Guide -->
+  <dialog id="sos-modal" class="rounded-3xl p-6 glass-panel border border-white/60 shadow-2xl max-w-xl w-full">
     <div class="flex justify-between items-center mb-3">
       <div>
         <h3 class="text-xl font-bold text-red-600 flex items-center gap-2">
-          <span class="material-symbols-outlined text-red-600">sos</span> Emergency SOS & Contacts
+          <span class="material-symbols-outlined text-red-600">sos</span> Emergency SOS & First-Aid
         </h3>
-        <p class="text-xs text-slate-500">Manage emergency contacts and broadcast live GPS tracking.</p>
+        <p class="text-xs text-slate-500">Live GPS SOS broadcasting & instant offline AI first-aid protocols.</p>
       </div>
       <button id="close-sos-modal" class="text-slate-400 hover:text-slate-600">
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
 
-    <div class="flex flex-col gap-4 text-sm max-h-[70vh] overflow-y-auto custom-scroll pr-1">
+    <!-- SOS Modal Sub-Tabs -->
+    <div class="flex gap-2 border-b border-slate-200/60 pb-2.5 mb-3 overflow-x-auto no-scrollbar">
+      <button type="button" class="sos-tab-btn active px-3.5 py-1.5 rounded-full text-xs font-bold text-red-600 bg-red-50 border border-red-200 shadow-sm transition-all" data-tab="sos-broadcast">
+        🚨 Live SOS & Contacts
+      </button>
+      <button type="button" class="sos-tab-btn px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-600 bg-white/50 border border-slate-200 hover:bg-white transition-all flex items-center gap-1" data-tab="first-aid-guide">
+        🩹 Offline AI First-Aid Guide <span class="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold">OFFLINE</span>
+      </button>
+    </div>
+
+    <div class="max-h-[68vh] overflow-y-auto custom-scroll pr-1 text-sm">
       
-      <!-- Stored Emergency Contacts List -->
-      <div class="p-3.5 rounded-2xl bg-white/60 border border-slate-200/80 space-y-2">
-        <div class="flex justify-between items-center">
-          <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
-            <span>👥 Saved Emergency Contacts</span>
-          </h4>
-          <span id="sos-contact-count" class="text-[11px] font-semibold text-slate-500">0 contacts</span>
+      <!-- TAB 1: Live SOS Broadcast & Contacts -->
+      <div id="tab-sos-broadcast" class="sos-tab-pane active flex flex-col gap-4">
+        <!-- Stored Emergency Contacts List -->
+        <div class="p-3.5 rounded-2xl bg-white/60 border border-slate-200/80 space-y-2">
+          <div class="flex justify-between items-center">
+            <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+              <span>👥 Saved Emergency Contacts</span>
+            </h4>
+            <span id="sos-contact-count" class="text-[11px] font-semibold text-slate-500">0 contacts</span>
+          </div>
+          <ul id="sos-contacts-list" class="space-y-2 pt-1">
+            <li class="p-3 rounded-xl bg-white/40 text-center text-xs text-slate-400 border border-slate-200">No emergency contacts saved yet. Add one below!</li>
+          </ul>
         </div>
-        <ul id="sos-contacts-list" class="space-y-2 pt-1">
-          <li class="p-3 rounded-xl bg-white/40 text-center text-xs text-slate-400 border border-slate-200">No emergency contacts saved yet. Add one below!</li>
-        </ul>
+
+        <!-- Add New Emergency Contact Form -->
+        <form id="add-sos-contact-form" class="p-3.5 rounded-2xl bg-white/60 border border-slate-200/80 space-y-2.5">
+          <h4 class="font-bold text-slate-800 text-xs">➕ Add New Emergency Contact</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label for="sos-new-name" class="block text-[11px] font-semibold text-slate-600 mb-0.5">Contact Name *</label>
+              <input type="text" id="sos-new-name" placeholder="e.g. Mom, Dr. Sharma" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 outline-none" required>
+            </div>
+            <div>
+              <label for="sos-new-phone" class="block text-[11px] font-semibold text-slate-600 mb-0.5">Phone Number *</label>
+              <input type="tel" id="sos-new-phone" placeholder="e.g. +91 98765 43210" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 outline-none" required>
+            </div>
+          </div>
+          <button type="submit" class="w-full py-2 rounded-xl bg-slate-800 text-white font-bold text-xs shadow hover:bg-slate-900 transition">
+            + Save Contact to SOS Vault
+          </button>
+        </form>
+
+        <!-- Active Target Phone Number -->
+        <div>
+          <label for="sos-phone" class="block font-semibold text-slate-700 mb-1 text-xs">📞 Selected SOS Recipient Phone Number:</label>
+          <input type="tel" id="sos-phone" placeholder="Selected contact number" class="w-full px-4 py-2.5 rounded-xl bg-white/80 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800 text-xs font-semibold">
+        </div>
+
+        <div class="flex flex-col gap-2 pt-1">
+          <button id="sos-confirm-btn" class="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold text-sm shadow-lg hover:opacity-95 transition">
+            🚨 ACTIVATE LIVE SOS BROADCAST
+          </button>
+          <button id="sos-modal-cancel" class="w-full py-2.5 rounded-xl glass-panel text-slate-700 font-semibold text-xs border border-slate-200 hover:bg-white/80">
+            ✕ Cancel
+          </button>
+        </div>
       </div>
 
-      <!-- Add New Emergency Contact Form -->
-      <form id="add-sos-contact-form" class="p-3.5 rounded-2xl bg-white/60 border border-slate-200/80 space-y-2.5">
-        <h4 class="font-bold text-slate-800 text-xs">➕ Add New Emergency Contact</h4>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label for="sos-new-name" class="block text-[11px] font-semibold text-slate-600 mb-0.5">Contact Name *</label>
-            <input type="text" id="sos-new-name" placeholder="e.g. Mom, Dr. Sharma" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 outline-none" required>
-          </div>
-          <div>
-            <label for="sos-new-phone" class="block text-[11px] font-semibold text-slate-600 mb-0.5">Phone Number *</label>
-            <input type="tel" id="sos-new-phone" placeholder="e.g. +91 98765 43210" class="w-full px-3 py-2 rounded-xl bg-white/80 border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 outline-none" required>
-          </div>
+      <!-- TAB 2: Offline AI First-Aid Guide -->
+      <div id="tab-first-aid-guide" class="sos-tab-pane space-y-3.5 hidden">
+        <div class="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-900 flex items-center gap-2">
+          <span class="material-symbols-outlined text-emerald-600 text-base shrink-0">verified_user</span>
+          <span><strong>100% Offline Ready:</strong> These medical emergency protocols load instantly without cellular network or internet data.</span>
         </div>
-        <button type="submit" class="w-full py-2 rounded-xl bg-slate-800 text-white font-bold text-xs shadow hover:bg-slate-900 transition">
-          + Save Contact to SOS Vault
-        </button>
-      </form>
 
-      <!-- Active Target Phone Number -->
-      <div>
-        <label for="sos-phone" class="block font-semibold text-slate-700 mb-1 text-xs">📞 Selected SOS Recipient Phone Number:</label>
-        <input type="tel" id="sos-phone" placeholder="Selected contact number" class="w-full px-4 py-2.5 rounded-xl bg-white/80 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800 text-xs font-semibold">
-      </div>
+        <!-- Search Bar -->
+        <div class="relative">
+          <input type="text" id="first-aid-search-input" placeholder="🔍 Search symptom or emergency (e.g. CPR, bleeding, snakebite, burn, choking)..." class="w-full px-4 py-2.5 pl-3 rounded-xl bg-white/80 border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800 font-medium">
+        </div>
 
-      <div class="flex flex-col gap-2 pt-1">
-        <button id="sos-confirm-btn" class="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold text-sm shadow-lg hover:opacity-95 transition">
-          🚨 ACTIVATE LIVE SOS BROADCAST
-        </button>
-        <button id="sos-modal-cancel" class="w-full py-2.5 rounded-xl glass-panel text-slate-700 font-semibold text-xs border border-slate-200 hover:bg-white/80">
-          ✕ Cancel
-        </button>
+        <!-- First-Aid Protocols Container -->
+        <div id="first-aid-protocols-list" class="space-y-3">
+          <!-- Dynamically populated protocols -->
+        </div>
       </div>
     </div>
   </dialog>
