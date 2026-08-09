@@ -1467,14 +1467,24 @@ function setupEventListeners() {
 
   if (navTabHealth) {
     navTabHealth.addEventListener("click", () => {
-      const healthModal = document.getElementById("health-modal");
-      if (healthModal) healthModal.showModal();
+      const openHealthBtn = document.getElementById("open-health-btn");
+      if (openHealthBtn) {
+        openHealthBtn.click();
+      } else {
+        const healthModal = document.getElementById("health-modal");
+        if (healthModal) healthModal.showModal();
+      }
     });
   }
 
   if (navTabSettings) {
     navTabSettings.addEventListener("click", () => {
-      if (DOM.settingsModal) DOM.settingsModal.showModal();
+      const openSettingsBtn = document.getElementById("open-settings-btn");
+      if (openSettingsBtn) {
+        openSettingsBtn.click();
+      } else if (DOM.settingsModal) {
+        DOM.settingsModal.showModal();
+      }
     });
   }
 
