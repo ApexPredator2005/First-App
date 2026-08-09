@@ -2405,13 +2405,46 @@ function setupNavigation() {
   const startNavBtn = document.getElementById("start-nav-btn");
   const exitNavBtn = document.getElementById("exit-nav-btn");
 
-  startNavBtn.addEventListener("click", () => {
-    if (state.lastRouteResponse && state.navDestination) {
-      startInAppNavigation(state.lastRouteResponse, state.navDestination);
+  if (startNavBtn) {
+    startNavBtn.addEventListener("click", async () => {
+      // Prompt user to download offline map if not downloaded yet
+      const meta = await getOfflineMeta();
+      if (!meta) {
+        const confirmDownload = confirm("📥 15 km Offline Map Not Installed!\n\nWould you like to download the 15 km Offline Emergency Map Pack now for navigation in dead zones?");
+        if (confirmDownload) {
+          const settingsModal = document.getElementById("settings-modal");
+          if (settingsModal) settingsModal.showModal();
+          download15kmOfflineMapPack();
+          return;
+        }
+      }
+
+      if (state.lastRouteResponse && state.navDestination) {
+        startInAppNavigation(state.lastRouteResponse, state.navDestination);
+      } else {
+        alert("Please select an emergency facility and calculate route first!");
+      }
+    });
+  }
+
+  if (exitNavBtn) {
+    exitNavBtn.addEventListener("click", () => stopInAppNavigation());
+  }
+
+  // Intercept Google Maps external button click to guarantee real Google Maps routing
+  DOM.navExternalBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (state.navDestination && state.userLocation) {
+      const destLat = typeof state.navDestination.location.lat === 'function' ? state.navDestination.location.lat() : state.navDestination.location.lat;
+      const destLng = typeof state.navDestination.location.lng === 'function' ? state.navDestination.location.lng() : state.navDestination.location.lng;
+      const srcLat = typeof state.userLocation.lat === 'function' ? state.userLocation.lat() : state.userLocation.lat;
+      const srcLng = typeof state.userLocation.lng === 'function' ? state.userLocation.lng() : state.userLocation.lng;
+      const navUrl = `https://www.google.com/maps/dir/?api=1&origin=${srcLat},${srcLng}&destination=${destLat},${destLng}&travelmode=driving`;
+      window.open(navUrl, "_blank");
+    } else {
+      window.open("https://www.google.com/maps", "_blank");
     }
   });
-
-  exitNavBtn.addEventListener("click", () => stopInAppNavigation());
 }
 
 function startInAppNavigation(response, place) {
