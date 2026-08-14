@@ -449,11 +449,13 @@ dialog[open] {
     top: 64px !important;
     right: 14px !important;
     bottom: auto !important;
+    left: auto !important;
     width: 42px !important;
     height: 42px !important;
     border-radius: 16px !important;
     padding: 8px !important;
     z-index: 42 !important;
+    pointer-events: auto !important;
   }
 
   #map-location-btn span {
@@ -468,7 +470,7 @@ dialog[open] {
     right: 0 !important;
     height: 54px !important;
     z-index: 40 !important;
-    padding: 0.35rem 0.85rem !important;
+    padding: 0.35rem 0.5rem !important;
     background: rgba(255, 255, 255, 0.65) !important;
     backdrop-filter: blur(32px) saturate(1.8) !important;
     -webkit-backdrop-filter: blur(32px) saturate(1.8) !important;
@@ -483,6 +485,18 @@ dialog[open] {
   #quote-text {
     font-size: 11.5px !important;
     font-weight: 600 !important;
+  }
+
+  /* Fix duplicate dropdown arrow on mobile */
+  #radius-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+    padding-right: 28px !important;
   }
 
   /* 3. Mobile Bottom Sheet Drawer - Proportional Height & Crisp Typography */
@@ -511,6 +525,12 @@ dialog[open] {
     font-size: 15px !important;
     font-weight: 800 !important;
     letter-spacing: -0.01em;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Prevent drawer overlap with map callout */
+  #sidebar-island {
+    margin-top: 0 !important;
   }
 
   /* Mobile Expanded Drawer Mode */
@@ -559,6 +579,23 @@ dialog[open] {
     border-radius: 9999px;
     margin: 0 auto 0.5rem auto !important;
     cursor: pointer;
+  }
+
+  /* Scroll fade indicator for category pills */
+  .category-pills {
+    position: relative !important;
+  }
+  .category-pills::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 2.5rem;
+    bottom: 0.35rem;
+    width: 36px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.8));
+    pointer-events: none;
+    border-radius: 0 18px 18px 0;
+    z-index: 2;
   }
 
   /* Category Pills on mobile - Apple/Google Style Auto-Width Chips */
@@ -638,6 +675,12 @@ dialog[open] {
   dialog {
     max-width: 94vw !important;
     max-height: 86vh !important;
+    border-radius: 28px !important;
+    padding: 1.25rem !important;
+  }
+  /* Helplines modal on mobile */
+  #helplines-modal {
+    max-width: 94vw !important;
     border-radius: 28px !important;
     padding: 1.25rem !important;
   }

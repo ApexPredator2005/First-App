@@ -42,7 +42,7 @@
 
   <!-- Top Glass Navigation Bar -->
   <header class="glass-panel border-b border-white/40 shadow-sm fixed top-0 w-full z-40 animate-fade-in-up">
-    <div class="flex justify-between items-center w-full px-5 py-2.5 max-w-[1600px] mx-auto">
+    <div class="flex justify-between items-center w-full px-3 sm:px-5 py-2.5 max-w-[1600px] mx-auto">
       <div class="flex items-center gap-3">
         <!-- Logo Image + ResQNow Text Name -->
         <a href="#" class="flex items-center gap-2.5">
@@ -162,59 +162,22 @@
       <!-- Dynamic Results Feed (Scrollbar within Scrollbar) -->
       <section class="glass-tile p-3.5 rounded-2xl animate-fade-in-up stagger-3">
         <h2 class="font-headline text-[15px] font-semibold text-slate-800 mb-2.5 px-1">Results</h2>
-        <ul id="places-feed" class="max-h-[290px] overflow-y-auto custom-scroll pr-1 flex flex-col gap-2.5">
+        <ul id="places-feed" class="overflow-y-auto custom-scroll pr-1 flex flex-col gap-2.5" style="max-height: calc(100vh - 380px);">
           <li class="glass-panel p-4 rounded-xl text-center text-slate-500 text-xs">
             Scanning surrounding coordinates... Select a category above to view immediate response units.
           </li>
         </ul>
       </section>
-
-      <!-- Complete Emergency Helplines (India) -->
-      <section class="glass-tile p-3.5 rounded-2xl animate-fade-in-up stagger-4">
-        <h2 class="font-headline text-[15px] font-semibold text-slate-800 mb-2.5 px-1">Emergency Helplines (India)</h2>
-        <div class="grid grid-cols-2 gap-2">
-          <a href="tel:100" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
-            <span class="font-body text-[12px] font-medium text-slate-700">👮 Police</span>
-            <span class="font-headline text-[13px] font-bold text-slate-800">100</span>
-          </a>
-          <a href="tel:101" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
-            <span class="font-body text-[12px] font-medium text-slate-700">🚒 Fire Dept</span>
-            <span class="font-headline text-[13px] font-bold text-slate-800">101</span>
-          </a>
-          <a href="tel:102" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
-            <span class="font-body text-[12px] font-medium text-slate-700">🚑 Ambulance</span>
-            <span class="font-headline text-[13px] font-bold text-slate-800">102</span>
-          </a>
-          <a href="tel:108" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
-            <span class="font-body text-[12px] font-medium text-slate-700">🏥 Disaster Med</span>
-            <span class="font-headline text-[13px] font-bold text-slate-800">108</span>
-          </a>
-          <a href="tel:1091" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
-            <span class="font-body text-[12px] font-medium text-slate-700">👩 Women</span>
-            <span class="font-headline text-[13px] font-bold text-slate-800">1091</span>
-          </a>
-          <a href="tel:1078" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
-            <span class="font-body text-[12px] font-medium text-slate-700">🚨 Disaster</span>
-            <span class="font-headline text-[13px] font-bold text-slate-800">1078</span>
-          </a>
-          <a href="tel:1098" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
-            <span class="font-body text-[12px] font-medium text-slate-700">👶 Child Help</span>
-            <span class="font-headline text-[13px] font-bold text-slate-800">1098</span>
-          </a>
-          <a href="tel:14567" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800">
-            <span class="font-body text-[12px] font-medium text-slate-700">👵 Senior Citizen</span>
-            <span class="font-headline text-[13px] font-bold text-slate-800">14567</span>
-          </a>
-        </div>
-      </section>
     </div>
   </aside>
 
-  <!-- 3. MAP CONTROLS & FLOATING SOS BUTTON -->
+  <!-- Map Recenter Button (independently positioned, fixed on mobile via CSS) -->
+  <button id="map-location-btn" class="fixed w-11 h-11 glass-panel rounded-2xl p-2.5 interactive-element shadow-lg border-white/60 hover:bg-white/80 text-slate-700 flex items-center justify-center z-30 bottom-6 right-6 md:bottom-8 md:right-8" title="Center on My Location" style="pointer-events:auto;">
+    <span class="material-symbols-outlined text-[20px]">near_me</span>
+  </button>
+
+  <!-- 3. FLOATING SOS BUTTON -->
   <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-30 flex flex-col gap-3 items-end pointer-events-auto">
-    <button id="map-location-btn" class="w-11 h-11 glass-panel rounded-2xl p-2.5 interactive-element shadow-lg border-white/60 hover:bg-white/80 text-slate-700 flex items-center justify-center" title="Center on My Location">
-      <span class="material-symbols-outlined text-[20px]">near_me</span>
-    </button>
     <button id="sos-btn" class="w-16 h-16 rounded-full bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-bold text-xs shadow-2xl interactive-element flex flex-col items-center justify-center border-2 border-white/90 sos-flowing-ring" title="Trigger Emergency SOS Broadcast">
       <span class="material-symbols-outlined text-[20px] mb-0.5">emergency</span>
       <span class="tracking-widest font-extrabold text-[11px] leading-none">SOS</span>
@@ -227,9 +190,9 @@
       <span class="material-symbols-outlined mb-0.5 text-[22px]">near_me</span>
       <span class="font-body text-[10px] font-bold">Locator</span>
     </button>
-    <button id="nav-tab-results" class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-3 py-1.5 outline-none">
-      <span class="material-symbols-outlined mb-0.5 text-[22px]">list_alt</span>
-      <span class="font-body text-[10px] font-bold">Results</span>
+    <button id="nav-tab-helplines" class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-3 py-1.5 outline-none">
+      <span class="material-symbols-outlined mb-0.5 text-[22px]">call</span>
+      <span class="font-body text-[10px] font-bold">Helplines</span>
     </button>
     <button id="nav-tab-health" class="flex flex-col items-center justify-center text-slate-500 hover:text-primary transition-all px-3 py-1.5 outline-none">
       <span class="material-symbols-outlined mb-0.5 text-[22px]">favorite</span>
@@ -240,6 +203,52 @@
       <span class="font-body text-[10px] font-bold">Settings</span>
     </button>
   </nav>
+
+  <!-- Emergency Helplines Modal (India) -->
+  <dialog id="helplines-modal" class="rounded-3xl p-6 glass-panel border border-white/60 shadow-2xl max-w-md w-full">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="font-headline text-lg font-bold text-slate-800">📞 Emergency Helplines (India)</h2>
+      <button onclick="this.closest('dialog').close()" class="p-1.5 rounded-full hover:bg-slate-100 transition"><span class="material-symbols-outlined text-slate-500">close</span></button>
+    </div>
+    <div class="grid grid-cols-2 gap-2.5">
+      <a href="tel:100" class="glass-panel interactive-element rounded-xl px-3 py-2.5 flex justify-between items-center border-white/50 text-slate-800">
+        <span class="font-body text-[12px] font-medium text-slate-700">👮 Police</span>
+        <span class="font-headline text-[13px] font-bold text-slate-800">100</span>
+      </a>
+      <a href="tel:101" class="glass-panel interactive-element rounded-xl px-3 py-2.5 flex justify-between items-center border-white/50 text-slate-800">
+        <span class="font-body text-[12px] font-medium text-slate-700">🚒 Fire Dept</span>
+        <span class="font-headline text-[13px] font-bold text-slate-800">101</span>
+      </a>
+      <a href="tel:102" class="glass-panel interactive-element rounded-xl px-3 py-2.5 flex justify-between items-center border-white/50 text-slate-800">
+        <span class="font-body text-[12px] font-medium text-slate-700">🚑 Ambulance</span>
+        <span class="font-headline text-[13px] font-bold text-slate-800">102</span>
+      </a>
+      <a href="tel:108" class="glass-panel interactive-element rounded-xl px-3 py-2.5 flex justify-between items-center border-white/50 text-slate-800">
+        <span class="font-body text-[12px] font-medium text-slate-700">🏥 Disaster Med</span>
+        <span class="font-headline text-[13px] font-bold text-slate-800">108</span>
+      </a>
+      <a href="tel:1091" class="glass-panel interactive-element rounded-xl px-3 py-2.5 flex justify-between items-center border-white/50 text-slate-800">
+        <span class="font-body text-[12px] font-medium text-slate-700">👩 Women</span>
+        <span class="font-headline text-[13px] font-bold text-slate-800">1091</span>
+      </a>
+      <a href="tel:1078" class="glass-panel interactive-element rounded-xl px-3 py-2.5 flex justify-between items-center border-white/50 text-slate-800">
+        <span class="font-body text-[12px] font-medium text-slate-700">🚨 Disaster</span>
+        <span class="font-headline text-[13px] font-bold text-slate-800">1078</span>
+      </a>
+      <a href="tel:1098" class="glass-panel interactive-element rounded-xl px-3 py-2.5 flex justify-between items-center border-white/50 text-slate-800">
+        <span class="font-body text-[12px] font-medium text-slate-700">👶 Child Help</span>
+        <span class="font-headline text-[13px] font-bold text-slate-800">1098</span>
+      </a>
+      <a href="tel:14567" class="glass-panel interactive-element rounded-xl px-3 py-2.5 flex justify-between items-center border-white/50 text-slate-800">
+        <span class="font-body text-[12px] font-medium text-slate-700">👵 Senior Citizen</span>
+        <span class="font-headline text-[13px] font-bold text-slate-800">14567</span>
+      </a>
+      <a href="tel:112" class="col-span-2 glass-panel interactive-element rounded-xl px-4 py-3 flex justify-between items-center border-white/50 text-slate-800 bg-red-50/50">
+        <span class="font-body text-[13px] font-bold text-red-700">🆘 National Emergency</span>
+        <span class="font-headline text-[15px] font-extrabold text-red-700">112</span>
+      </a>
+    </div>
+  </dialog>
 
   <!-- ============================================================================ -->
   <!-- MODALS & OVERLAYS                                                            -->

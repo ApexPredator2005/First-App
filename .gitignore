@@ -1,4 +1,11 @@
 .DS_Store
 .agents/
 .gemini/
-config.js
+/config.js
+.env
+.env.local
+.env.production
+.env*.local
+.vercel
+ALLCODE.txt
+node_modules/

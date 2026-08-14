@@ -113,8 +113,45 @@ if (document.readyState === "complete" || document.readyState === "interactive")
   document.addEventListener("DOMContentLoaded", initApp);
 }
 
+// Global Toast Notification System
+function showToast(message, type = "info", duration = 4000) {
+  const existing = document.getElementById("app-toast");
+  if (existing) existing.remove();
+  const toast = document.createElement("div");
+  toast.id = "app-toast";
+  const colors = { info: "#0058bc", warning: "#e67e00", error: "#ba1a1a", success: "#16a34a" };
+  toast.style.cssText = `position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-20px);z-index:9999;padding:10px 20px;border-radius:16px;background:${colors[type]||colors.info};color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,0.18);opacity:0;transition:opacity 0.3s ease,transform 0.3s ease;pointer-events:none;max-width:90vw;text-align:center;`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => { toast.style.opacity = "1"; toast.style.transform = "translateX(-50%) translateY(0)"; });
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateX(-50%) translateY(-20px)";
+    setTimeout(() => toast.remove(), 400);
+  }, duration);
+}
+
+// Global HTML escaping utility (prevents XSS from user/API-sourced strings)
+function escapeHtml(str) {
+  if (str == null) return "";
+  str = String(str);
+  return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+}
+
 async function loadStoredSettings() {
-  let savedKey = localStorage.getItem("GMP_API_KEY") || "";
+  let savedKey = "";
+  // Primary source: fetch shared API key from serverless proxy (/api/config)
+  try {
+    const res = await fetch("/api/config");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.apiKey) savedKey = data.apiKey;
+    }
+  } catch (e) {
+    console.warn("Could not fetch API key from /api/config, using localStorage fallback:", e);
+  }
+  // Fallback/override: user's own localStorage key (for local dev or static hosting)
+  if (!savedKey) savedKey = localStorage.getItem("GMP_API_KEY") || "";
   const savedMapId = localStorage.getItem("GMP_MAP_ID") || "DEMO_MAP_ID";
   state.apiKey = savedKey;
   state.mapId = savedMapId;
@@ -252,7 +289,12 @@ async function getCountForCategory(category) {
         });
         if (filtered.length > 0) return filtered.length;
       }
-    } catch(e) {}
+    } catch(e) {
+      const errMsg = e?.message || String(e);
+      if (/OVER_QUERY_LIMIT|REQUEST_DENIED|quota/i.test(errMsg)) {
+        state.googleMapsAuthFailed = true;
+      }
+    }
   }
   
   // Try Classic PlacesService
@@ -1066,6 +1108,11 @@ async function performNearbySearch() {
       }
     } catch (e) {
       console.warn("Places API (New) searchNearby failed:", e);
+      const errMsg = e?.message || String(e);
+      if (/OVER_QUERY_LIMIT|REQUEST_DENIED|quota/i.test(errMsg) || e?.status === 403 || e?.status === 429) {
+        showToast("⚠️ Google Maps quota exceeded — switching to OpenStreetMap data", "warning", 6000);
+        state.googleMapsAuthFailed = true;
+      }
     }
   }
 
@@ -1118,15 +1165,15 @@ function renderPlaceCard(place, index) {
 
   li.innerHTML = `
     <div class="flex justify-between items-center gap-2">
-      <h3 class="font-headline text-[13.5px] font-bold text-slate-800 truncate flex-1 leading-snug" title="${placeName}">${placeName}</h3>
+      <h3 class="font-headline text-[13.5px] font-bold text-slate-800 truncate flex-1 leading-snug" title="${escapeHtml(placeName)}">${escapeHtml(placeName)}</h3>
       <span class="font-headline text-[11px] ${statusClass} shrink-0 px-2 py-0.5 rounded-full bg-white/70 border border-white/80">${statusText}</span>
     </div>
-    <p class="font-body text-[11.5px] text-slate-500 truncate leading-tight">${place.formattedAddress || "Address unavailable"}</p>
+    <p class="font-body text-[11.5px] text-slate-500 truncate leading-tight">${escapeHtml(place.formattedAddress || "Address unavailable")}</p>
     <div class="flex items-center justify-between gap-2 mt-0.5 pt-1 border-t border-slate-200/40">
       <div class="flex items-center gap-2 text-[11.5px] text-slate-700 font-semibold whitespace-nowrap">
         <span>📍 ${distKm} km</span>
         ${place.rating ? `<span class="text-amber-600 font-bold">⭐ ${place.rating}</span>` : ""}
-        ${phoneNum ? `<a href="tel:${phoneNum}" class="text-blue-600 hover:underline flex items-center" onclick="event.stopPropagation();" title="Call ${phoneNum}"><span class="material-symbols-outlined text-[14px]">call</span></a>` : ""}
+        ${phoneNum ? `<a href="tel:${escapeHtml(phoneNum)}" class="text-blue-600 hover:underline flex items-center" onclick="event.stopPropagation();" title="Call ${escapeHtml(phoneNum)}"><span class="material-symbols-outlined text-[14px]">call</span></a>` : ""}
       </div>
       <button class="btn-route px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-headline text-[11px] font-bold shadow-sm hover:shadow hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 flex items-center gap-1 border border-white/30" data-index="${index}">
         <span>⚡ Quick Route</span>
@@ -1522,7 +1569,7 @@ function setupEventListeners() {
   // ============================================================================
   const sidebarIsland = document.getElementById("sidebar-island");
   const navTabLocator = document.getElementById("nav-tab-locator");
-  const navTabResults = document.getElementById("nav-tab-results");
+  const navTabHelplines = document.getElementById("nav-tab-helplines");
   const navTabHealth = document.getElementById("nav-tab-health");
   const navTabSettings = document.getElementById("nav-tab-settings");
 
@@ -1537,11 +1584,11 @@ function setupEventListeners() {
     });
   }
 
-  if (navTabResults && sidebarIsland) {
-    navTabResults.addEventListener("click", () => {
-      sidebarIsland.classList.toggle("drawer-expanded");
-      if (sidebarIsland.classList.contains("drawer-expanded")) {
-        sidebarIsland.scrollTop = 0;
+  if (navTabHelplines) {
+    navTabHelplines.addEventListener("click", () => {
+      const helpModal = document.getElementById("helplines-modal");
+      if (helpModal) {
+        try { if (!helpModal.open) helpModal.showModal(); } catch(e) { helpModal.setAttribute("open", ""); }
       }
     });
   }
@@ -1902,8 +1949,8 @@ function setupHealthModal() {
         ${item.medicines ? `<p class="health-card-desc"><b>Medications:</b> ${escapeHtml(item.medicines)}</p>` : ''}
         ${item.fileData ? `
           <div class="rx-preview-box">
-            ${item.fileType?.startsWith("image/") ? `<img src="${item.fileData}" alt="Prescription" class="rx-img-thumb">` : ''}
-            <a href="${item.fileData}" download="${escapeHtml(item.fileName || 'prescription')}" class="btn-rx-download" target="_blank">📄 View/Download ${escapeHtml(item.fileName || 'Document')}</a>
+            ${item.fileType?.startsWith("image/") ? `<img src="${escapeHtml(item.fileData)}" alt="Prescription" class="rx-img-thumb">` : ''}
+            <a href="${escapeHtml(item.fileData)}" download="${escapeHtml(item.fileName || 'prescription')}" class="btn-rx-download" target="_blank">📄 View/Download ${escapeHtml(item.fileName || 'Document')}</a>
           </div>
         ` : ''}
         <div class="health-card-actions">
@@ -2024,7 +2071,8 @@ function setupHealthModal() {
   }
 
   function escapeHtml(str) {
-    if (!str) return "";
+    if (str == null) return "";
+    str = String(str);
     return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
   }
 }
@@ -2106,22 +2154,33 @@ function setupSOS() {
     }
 
     sosContactsList.innerHTML = contacts.map((c, i) => `
-      <li class="p-2.5 px-3 rounded-xl bg-white/70 border border-white/80 shadow-sm flex items-center justify-between gap-2 interactive-element cursor-pointer hover:bg-white/90" onclick="window.selectSOSContact('${c.phone}')">
+      <li class="p-2.5 px-3 rounded-xl bg-white/70 border border-white/80 shadow-sm flex items-center justify-between gap-2 interactive-element cursor-pointer hover:bg-white/90" data-phone="${escapeHtml(c.phone)}" data-action="select-sos">
         <div class="flex items-center gap-2 overflow-hidden">
           <span class="w-7 h-7 rounded-full bg-red-100 text-red-600 font-bold text-xs flex items-center justify-center shrink-0">👤</span>
           <div class="truncate">
-            <span class="font-bold text-slate-800 text-xs block truncate">${c.name}</span>
-            <span class="text-[11px] text-slate-500 font-medium block truncate">📞 ${c.phone}</span>
+            <span class="font-bold text-slate-800 text-xs block truncate">${escapeHtml(c.name)}</span>
+            <span class="text-[11px] text-slate-500 font-medium block truncate">📞 ${escapeHtml(c.phone)}</span>
           </div>
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          <button type="button" onclick="event.stopPropagation(); window.selectSOSContact('${c.phone}')" class="px-2.5 py-1 rounded-lg bg-red-600 text-white font-bold text-[11px] shadow-sm hover:bg-red-700 transition">Select</button>
-          <button type="button" onclick="event.stopPropagation(); window.deleteSOSContact(${i})" class="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition" title="Delete contact">
+          <button type="button" data-phone="${escapeHtml(c.phone)}" data-action="select-sos-btn" class="px-2.5 py-1 rounded-lg bg-red-600 text-white font-bold text-[11px] shadow-sm hover:bg-red-700 transition">Select</button>
+          <button type="button" data-index="${i}" data-action="delete-sos" class="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition" title="Delete contact">
             <span class="material-symbols-outlined text-[16px]">delete</span>
           </button>
         </div>
       </li>
     `).join('');
+
+    // Event delegation: replace inline onclick with addEventListener (XSS-safe)
+    sosContactsList.querySelectorAll('[data-action="select-sos"]').forEach(li => {
+      li.addEventListener('click', () => window.selectSOSContact(li.dataset.phone));
+    });
+    sosContactsList.querySelectorAll('[data-action="select-sos-btn"]').forEach(btn => {
+      btn.addEventListener('click', (e) => { e.stopPropagation(); window.selectSOSContact(btn.dataset.phone); });
+    });
+    sosContactsList.querySelectorAll('[data-action="delete-sos"]').forEach(btn => {
+      btn.addEventListener('click', (e) => { e.stopPropagation(); window.deleteSOSContact(parseInt(btn.dataset.index)); });
+    });
 
     if (!sosPhone.value && contacts.length > 0) {
       sosPhone.value = contacts[0].phone;
@@ -2805,6 +2864,110 @@ document.getElementById("clear-offline-map-btn")?.addEventListener("click", clea
 updateOfflineStatusUI();
 
 // ============================================================================
+// MOBILE DRAWER DRAG-TO-EXPAND/COLLAPSE GESTURE ENGINE
+// ============================================================================
+function setupDrawerDragGesture() {
+  const drawer = document.getElementById("sidebar-island");
+  const handle = drawer?.querySelector(".mobile-drawer-handle");
+  if (!drawer) return;
+
+  let startY = 0;
+  let startHeight = 0;
+  let isDragging = false;
+  let startScrollTop = 0;
+
+  function getDrawerHeight() {
+    return drawer.getBoundingClientRect().height;
+  }
+
+  function onTouchStart(e) {
+    if (window.innerWidth > 768) return;
+    // Only start drag from handle, or from drawer content when scrolled to top
+    const isHandle = e.target.closest(".mobile-drawer-handle");
+    const isDrawerContent = e.target.closest("#sidebar-island");
+    if (!isHandle && !isDrawerContent) return;
+    
+    startScrollTop = drawer.scrollTop;
+    // If not on handle and drawer is scrolled down, don't initiate drag
+    if (!isHandle && startScrollTop > 5) return;
+    
+    startY = e.touches[0].clientY;
+    startHeight = getDrawerHeight();
+    isDragging = false; // Will be set true once threshold is met
+  }
+
+  function onTouchMove(e) {
+    if (window.innerWidth > 768 || startY === 0) return;
+    const currentY = e.touches[0].clientY;
+    const deltaY = startY - currentY; // positive = swiping up
+
+    // Threshold to distinguish drag from scroll
+    if (!isDragging && Math.abs(deltaY) > 15) {
+      // If swiping down and drawer is scrolled, let normal scroll handle it
+      if (deltaY < 0 && drawer.scrollTop > 5) {
+        startY = 0;
+        return;
+      }
+      isDragging = true;
+    }
+
+    if (!isDragging) return;
+
+    // Prevent default scroll while dragging
+    e.preventDefault();
+
+    const windowH = window.innerHeight;
+    const minH = windowH * 0.46; // collapsed height
+    const maxH = windowH * 0.86; // expanded height
+    let newHeight = Math.min(maxH, Math.max(minH, startHeight + deltaY));
+
+    drawer.style.transition = "none";
+    drawer.style.height = newHeight + "px";
+    drawer.style.maxHeight = newHeight + "px";
+  }
+
+  function onTouchEnd() {
+    if (window.innerWidth > 768 || !isDragging) {
+      startY = 0;
+      isDragging = false;
+      return;
+    }
+
+    const currentHeight = getDrawerHeight();
+    const windowH = window.innerHeight;
+    const midpoint = windowH * 0.66; // threshold between collapsed and expanded
+
+    // Clear inline styles and let CSS classes handle final state
+    drawer.style.transition = "";
+    drawer.style.height = "";
+    drawer.style.maxHeight = "";
+
+    if (currentHeight > midpoint) {
+      drawer.classList.add("drawer-expanded");
+    } else {
+      drawer.classList.remove("drawer-expanded");
+    }
+
+    startY = 0;
+    isDragging = false;
+  }
+
+  // Attach to handle (highest priority drag target)
+  if (handle) {
+    handle.addEventListener("touchstart", onTouchStart, { passive: true });
+    handle.addEventListener("touchmove", onTouchMove, { passive: false });
+    handle.addEventListener("touchend", onTouchEnd, { passive: true });
+  }
+
+  // Attach to drawer itself for swipe-up-from-top gesture
+  drawer.addEventListener("touchstart", onTouchStart, { passive: true });
+  drawer.addEventListener("touchmove", onTouchMove, { passive: false });
+  drawer.addEventListener("touchend", onTouchEnd, { passive: true });
+}
+
+setupDrawerDragGesture();
+
+// ============================================================================
 // MOBILE PULL-TO-REFRESH GESTURE ENGINE
 // ============================================================================
 function setupPullToRefresh() {
@@ -2821,7 +2984,8 @@ function setupPullToRefresh() {
   function handleTouchStart(e) {
     if (window.innerWidth > 768) return;
     const scrollTop = drawer ? drawer.scrollTop : 0;
-    if (scrollTop <= 0) {
+    // Only allow pull-to-refresh when scrolled to top AND not initiated from drawer handle
+    if (scrollTop <= 0 && !e.target.closest(".mobile-drawer-handle")) {
       startY = e.touches[0].clientY;
       isPulling = true;
     }
@@ -2831,6 +2995,8 @@ function setupPullToRefresh() {
     if (!isPulling || window.innerWidth > 768) return;
     currentY = e.touches[0].clientY;
     const deltaY = currentY - startY;
+    // Cancel pull-to-refresh if user is swiping up (that's a drawer drag)
+    if (deltaY < -10) { isPulling = false; return; }
 
     if (deltaY > 50) {
       if (indicator) {
