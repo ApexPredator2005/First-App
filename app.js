@@ -139,23 +139,32 @@ function escapeHtml(str) {
 }
 
 async function loadStoredSettings() {
-  let savedKey = "";
+  let serverKey = "";
   // Primary source: fetch shared API key from serverless proxy (/api/config)
   try {
     const res = await fetch("/api/config");
     if (res.ok) {
       const data = await res.json();
-      if (data.apiKey) savedKey = data.apiKey;
+      if (data.apiKey) serverKey = data.apiKey;
     }
   } catch (e) {
     console.warn("Could not fetch API key from /api/config, using localStorage fallback:", e);
   }
-  // Fallback/override: user's own localStorage key (for local dev or static hosting)
-  if (!savedKey) savedKey = localStorage.getItem("GMP_API_KEY") || "";
+  // User manual override from localStorage (takes precedence if user entered a custom key)
+  const userManualKey = localStorage.getItem("GMP_API_KEY") || "";
   const savedMapId = localStorage.getItem("GMP_MAP_ID") || "DEMO_MAP_ID";
-  state.apiKey = savedKey;
+
+  // Use user's manual override if set, otherwise use shared server key
+  state.apiKey = userManualKey || serverKey;
   state.mapId = savedMapId;
-  if (DOM.apiKeyInput) DOM.apiKeyInput.value = savedKey;
+
+  // IMPORTANT: Only populate input with user's explicit manual override (never the server key)
+  if (DOM.apiKeyInput) {
+    DOM.apiKeyInput.value = userManualKey;
+    if (serverKey && !userManualKey) {
+      DOM.apiKeyInput.placeholder = "Server key active (optional custom override)";
+    }
+  }
   if (DOM.mapIdInput) DOM.mapIdInput.value = savedMapId;
 }
 
@@ -1711,16 +1720,20 @@ function setupEventListeners() {
     const enteredKey = DOM.apiKeyInput.value.trim();
     const enteredMapId = DOM.mapIdInput.value.trim() || "DEMO_MAP_ID";
     
-    localStorage.setItem("GMP_API_KEY", enteredKey);
-    localStorage.setItem("GMP_MAP_ID", enteredMapId);
-    state.apiKey = enteredKey;
-    state.mapId = enteredMapId;
-    
-    closeModalSmooth(DOM.settingsModal);
     if (enteredKey) {
+      localStorage.setItem("GMP_API_KEY", enteredKey);
+    } else {
+      localStorage.removeItem("GMP_API_KEY");
+    }
+    localStorage.setItem("GMP_MAP_ID", enteredMapId);
+    
+    await loadStoredSettings();
+    closeModalSmooth(DOM.settingsModal);
+    
+    if (state.apiKey) {
       await initializeAppEngine();
     } else {
-      alert("Please enter a valid Google Maps API Key or Demo Key to start scanning.");
+      alert("Please configure a Google Maps API Key on your server or enter a custom key.");
     }
   });
 

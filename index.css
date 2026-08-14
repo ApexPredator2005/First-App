@@ -351,33 +351,45 @@ dialog[open] {
 }
 
 /* Health Profile Sub-tabs & Smooth Pane Transitions */
+.health-nav-tabs-wrapper {
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+  padding-bottom: 2px;
+}
+
 .health-nav-tabs {
-  padding-top: 6px !important;
-  padding-bottom: 12px !important;
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 8px 6px 10px 6px !important;
+  align-items: center;
+  -webkit-overflow-scrolling: touch;
 }
 
 .health-tab-btn {
-  padding: 0.5rem 0.95rem;
-  margin: 4px 2px;
+  padding: 0.5rem 1rem;
   border-radius: 9999px;
   font-size: 0.8rem;
   font-weight: 600;
   color: #64748b;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(203, 213, 225, 0.7);
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(203, 213, 225, 0.75);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
+  flex-shrink: 0;
+  outline: none;
 }
 .health-tab-btn:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   color: #1e293b;
+  border-color: rgba(148, 163, 184, 0.8);
 }
 .health-tab-btn.active {
   color: #0058bc;
   background: #ffffff;
   border-color: #0058bc;
-  box-shadow: 0 0 0 1px #0058bc, 0 4px 12px rgba(0, 88, 188, 0.15);
+  box-shadow: 0 0 0 1.5px #0058bc, 0 4px 14px rgba(0, 88, 188, 0.2);
 }
 
 .health-tab-pane {
