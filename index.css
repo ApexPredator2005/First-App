@@ -358,6 +358,7 @@ dialog[open] {
 
 .health-tab-btn {
   padding: 0.5rem 0.95rem;
+  margin: 4px 2px;
   border-radius: 9999px;
   font-size: 0.8rem;
   font-weight: 600;
