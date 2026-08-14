@@ -2,9 +2,16 @@
 // Securely proxies the Google Maps API Key from environment variables to the frontend
 // Route: GET /api/config → returns { apiKey, status }
 module.exports = function handler(req, res) {
-  // CORS & Caching headers
-  // TODO: After deployment, restrict Access-Control-Allow-Origin to your Vercel domain
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Dynamic & Strict CORS Policy: Allow local dev, same-host requests, and Vercel domains
+  const origin = req.headers.origin || "";
+  const host = req.headers.host || "";
+  
+  let allowedOrigin = `https://${host}`;
+  if (origin && (origin.endsWith('.vercel.app') || origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes(host))) {
+    allowedOrigin = origin;
+  }
+  
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET');
   res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
 
