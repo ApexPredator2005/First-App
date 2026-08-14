@@ -443,23 +443,21 @@ dialog[open] {
     z-index: 1 !important;
   }
 
-  /* Position & Size Recenter Map Button on Top Right below header on mobile */
+  /* Recenter Map Button inside floating controls on mobile */
   #map-location-btn {
-    position: fixed !important;
-    top: 64px !important;
-    right: 14px !important;
-    bottom: auto !important;
-    left: auto !important;
-    width: 42px !important;
-    height: 42px !important;
+    width: 44px !important;
+    height: 44px !important;
     border-radius: 16px !important;
     padding: 8px !important;
-    z-index: 42 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     pointer-events: auto !important;
+    z-index: 45 !important;
   }
 
   #map-location-btn span {
-    font-size: 20px !important;
+    font-size: 22px !important;
   }
 
   /* 2. Top Glass Header Bar - Sleek Mobile Height & Clear Typography */

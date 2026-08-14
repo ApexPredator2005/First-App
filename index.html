@@ -168,17 +168,59 @@
           </li>
         </ul>
       </section>
+      <!-- Complete Emergency Helplines (India) -->
+      <section class="glass-tile p-3.5 rounded-2xl animate-fade-in-up stagger-4">
+        <h2 class="font-headline text-[15px] font-semibold text-slate-800 mb-2.5 px-1">Emergency Helplines (India)</h2>
+        <div class="grid grid-cols-2 gap-2">
+          <a href="tel:100" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800 hover:bg-white/90 transition-all">
+            <span class="font-body text-[12px] font-medium text-slate-700">👮 Police</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">100</span>
+          </a>
+          <a href="tel:101" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800 hover:bg-white/90 transition-all">
+            <span class="font-body text-[12px] font-medium text-slate-700">🚒 Fire Dept</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">101</span>
+          </a>
+          <a href="tel:102" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800 hover:bg-white/90 transition-all">
+            <span class="font-body text-[12px] font-medium text-slate-700">🚑 Ambulance</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">102</span>
+          </a>
+          <a href="tel:108" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800 hover:bg-white/90 transition-all">
+            <span class="font-body text-[12px] font-medium text-slate-700">🏥 Disaster Med</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">108</span>
+          </a>
+          <a href="tel:1091" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800 hover:bg-white/90 transition-all">
+            <span class="font-body text-[12px] font-medium text-slate-700">👩 Women</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">1091</span>
+          </a>
+          <a href="tel:1078" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800 hover:bg-white/90 transition-all">
+            <span class="font-body text-[12px] font-medium text-slate-700">🚨 Disaster</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">1078</span>
+          </a>
+          <a href="tel:1098" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800 hover:bg-white/90 transition-all">
+            <span class="font-body text-[12px] font-medium text-slate-700">👶 Child Help</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">1098</span>
+          </a>
+          <a href="tel:14567" class="glass-panel interactive-element rounded-xl px-3 py-2 flex justify-between items-center border-white/50 text-slate-800 hover:bg-white/90 transition-all">
+            <span class="font-body text-[12px] font-medium text-slate-700">👵 Senior Citizen</span>
+            <span class="font-headline text-[13px] font-bold text-slate-800">14567</span>
+          </a>
+          <a href="tel:112" class="col-span-2 glass-panel interactive-element rounded-xl px-4 py-2.5 flex justify-between items-center border-white/50 text-slate-800 bg-red-50/60 hover:bg-red-100/70 transition-all">
+            <span class="font-body text-[12.5px] font-bold text-red-700">🆘 National Emergency</span>
+            <span class="font-headline text-[14px] font-extrabold text-red-700">112</span>
+          </a>
+        </div>
+      </section>
     </div>
   </aside>
 
-  <!-- Map Recenter Button (independently positioned, fixed on mobile via CSS) -->
-  <button id="map-location-btn" class="fixed w-11 h-11 glass-panel rounded-2xl p-2.5 interactive-element shadow-lg border-white/60 hover:bg-white/80 text-slate-700 flex items-center justify-center z-30 bottom-6 right-6 md:bottom-8 md:right-8" title="Center on My Location" style="pointer-events:auto;">
-    <span class="material-symbols-outlined text-[20px]">near_me</span>
-  </button>
-
-  <!-- 3. FLOATING SOS BUTTON -->
-  <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-30 flex flex-col gap-3 items-end pointer-events-auto">
-    <button id="sos-btn" class="w-16 h-16 rounded-full bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-bold text-xs shadow-2xl interactive-element flex flex-col items-center justify-center border-2 border-white/90 sos-flowing-ring" title="Trigger Emergency SOS Broadcast">
+  <!-- 3. MAP CONTROLS & FLOATING ACTION BUTTONS (Clean Vertical Stack) -->
+  <div class="floating-controls fixed bottom-6 right-6 md:bottom-8 md:right-8 z-30 flex flex-col gap-3 items-end pointer-events-auto">
+    <!-- Map Recenter Arrow Button -->
+    <button id="map-location-btn" class="w-12 h-12 glass-panel rounded-2xl p-2.5 interactive-element shadow-lg border-white/70 hover:bg-white text-slate-800 flex items-center justify-center cursor-pointer transition-all hover:scale-105 active:scale-95" title="Center on My Location">
+      <span class="material-symbols-outlined text-[22px] text-blue-600">near_me</span>
+    </button>
+    <!-- Emergency SOS Button -->
+    <button id="sos-btn" class="w-16 h-16 rounded-full bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-bold text-xs shadow-2xl interactive-element flex flex-col items-center justify-center border-2 border-white/90 sos-flowing-ring cursor-pointer transition-all hover:scale-105 active:scale-95" title="Trigger Emergency SOS Broadcast">
       <span class="material-symbols-outlined text-[20px] mb-0.5">emergency</span>
       <span class="tracking-widest font-extrabold text-[11px] leading-none">SOS</span>
     </button>
