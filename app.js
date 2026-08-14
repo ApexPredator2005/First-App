@@ -473,17 +473,15 @@ function renderMap() {
         center: state.userLocation,
         zoom: 13,
         mapId: state.mapId,
-        disableDefaultUI: false,
+        disableDefaultUI: true,
         zoomControl: true,
         zoomControlOptions: {
-          position: window.google?.maps?.ControlPosition?.RIGHT_CENTER
+          position: google.maps.ControlPosition.RIGHT_CENTER
         },
         fullscreenControl: true,
         fullscreenControlOptions: {
-          position: window.google?.maps?.ControlPosition?.TOP_RIGHT
+          position: google.maps.ControlPosition.LEFT_BOTTOM
         },
-        streetViewControl: false,
-        mapTypeControl: false,
         gestureHandling: "greedy"
       });
 
