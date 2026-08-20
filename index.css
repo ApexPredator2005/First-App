@@ -514,7 +514,7 @@ dialog[open] {
     padding-right: 28px !important;
   }
 
-  /* 3. Mobile Bottom Sheet Drawer - Proportional Height & Crisp Typography */
+  /* 3. Mobile Bottom Sheet Drawer - Streamlined Peek Mode & Crisp Typography */
   #sidebar-island {
     position: fixed !important;
     top: auto !important;
@@ -522,25 +522,25 @@ dialog[open] {
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
-    height: 46vh !important;
-    max-height: 46vh !important;
+    height: 180px !important;
+    max-height: 180px !important;
     z-index: 30 !important;
     padding: 0.65rem 0.85rem !important;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.68) 0%, rgba(248, 250, 252, 0.48) 100%) !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(248, 250, 252, 0.60) 100%) !important;
     backdrop-filter: blur(32px) saturate(1.8) !important;
     -webkit-backdrop-filter: blur(32px) saturate(1.8) !important;
     border-radius: 28px 28px 0 0 !important;
     border-top: 1.5px solid rgba(255, 255, 255, 0.9) !important;
-    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.14) !important;
-    transition: height 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.12) !important;
+    transition: height 0.38s cubic-bezier(0.16, 1, 0.3, 1), max-height 0.38s cubic-bezier(0.16, 1, 0.3, 1) !important;
     pointer-events: auto !important;
   }
 
   #sidebar-island h2 {
-    font-size: 15px !important;
+    font-size: 14px !important;
     font-weight: 800 !important;
     letter-spacing: -0.01em;
-    margin-bottom: 0.5rem !important;
+    margin-bottom: 0.35rem !important;
   }
 
   /* Prevent drawer overlap with map callout */
@@ -550,8 +550,8 @@ dialog[open] {
 
   /* Mobile Expanded Drawer Mode */
   #sidebar-island.drawer-expanded {
-    height: 86vh !important;
-    max-height: 86vh !important;
+    height: 84vh !important;
+    max-height: 84vh !important;
   }
 
   /* Translucent Tiles & Cards inside Mobile Drawer */
@@ -560,100 +560,107 @@ dialog[open] {
     backdrop-filter: blur(24px) saturate(1.6) !important;
     -webkit-backdrop-filter: blur(24px) saturate(1.6) !important;
     border: 1px solid rgba(255, 255, 255, 0.7) !important;
-    padding: 10px 14px !important;
+    padding: 8px 12px !important;
     border-radius: 18px !important;
   }
 
   #sidebar-island .place-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.50)) !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.55)) !important;
     backdrop-filter: blur(24px) !important;
     -webkit-backdrop-filter: blur(24px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.75) !important;
     padding: 12px 14px !important;
     border-radius: 20px !important;
     margin-bottom: 10px !important;
   }
 
   #sidebar-island .place-card h3 {
-    font-size: 14.5px !important;
+    font-size: 14px !important;
     font-weight: 700 !important;
     line-height: 1.3 !important;
   }
 
   #sidebar-island .place-card p, #sidebar-island .place-card span {
-    font-size: 12.5px !important;
+    font-size: 12px !important;
     font-weight: 500 !important;
+  }
+
+  #places-feed {
+    padding-bottom: 5.5rem !important;
   }
 
   /* Drag handle indicator at top of mobile bottom drawer */
   .mobile-drawer-handle {
     display: block !important;
-    width: 44px !important;
-    height: 5px !important;
+    width: 40px !important;
+    height: 4.5px !important;
     background-color: rgba(148, 163, 184, 0.7);
     border-radius: 9999px;
-    margin: 0 auto 0.5rem auto !important;
+    margin: 0 auto 0.4rem auto !important;
     cursor: pointer;
   }
 
-  /* Scroll fade indicator for category pills */
-  .category-pills {
-    position: relative !important;
-  }
-  .category-pills::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 2.5rem;
-    bottom: 0.35rem;
-    width: 36px;
-    background: linear-gradient(to right, transparent, rgba(255,255,255,0.8));
-    pointer-events: none;
-    border-radius: 0 18px 18px 0;
-    z-index: 2;
-  }
-
-  /* Category Pills on mobile - Apple/Google Style Auto-Width Chips */
+  /* Category Pills on mobile - Sleek Apple Health-Style Chips */
   .category-pills .grid {
     display: flex !important;
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
     scroll-snap-type: x mandatory;
-    gap: 0.65rem !important;
-    padding-bottom: 0.35rem !important;
+    gap: 0.5rem !important;
+    padding-bottom: 0.2rem !important;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none !important;
+  }
+  .category-pills .grid::-webkit-scrollbar {
+    display: none !important;
   }
 
   .category-pills button {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
     flex: 0 0 auto !important;
     min-width: max-content !important;
-    padding: 0.55rem 0.9rem !important;
+    padding: 0.45rem 0.85rem !important;
     scroll-snap-align: start;
     border-radius: 9999px !important;
-    opacity: 0.92 !important;
+    opacity: 0.95 !important;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease !important;
+  }
+
+  .category-pills button:active {
+    transform: scale(0.96) !important;
+  }
+
+  .category-pills button.active {
+    box-shadow: 0 0 0 2px #ffffff, 0 4px 14px rgba(0, 88, 188, 0.3) !important;
   }
 
   .pill-label {
-    font-size: 12.5px !important;
+    font-size: 12px !important;
     font-weight: 700 !important;
   }
 
   .pill-count {
-    font-size: 14px !important;
+    font-size: 13px !important;
     font-weight: 800 !important;
+    margin-top: 0 !important;
+    margin-left: 2px !important;
   }
 
   /* 4. Floating Action Buttons (SOS & Location Arrow) */
   .fixed.bottom-6.right-6 {
-    bottom: 74px !important;
+    bottom: 245px !important;
     right: 14px !important;
     z-index: 45 !important;
   }
 
   #sos-btn {
-    width: 3.8rem !important;
-    height: 3.8rem !important;
-    font-size: 15px !important;
+    width: 3.75rem !important;
+    height: 3.75rem !important;
+    font-size: 14.5px !important;
+    box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.2), 0 8px 24px rgba(225, 29, 72, 0.4) !important;
   }
 
   /* 5. Mobile Bottom Tab Navigation Bar - High Visibility & Readable Labels */
