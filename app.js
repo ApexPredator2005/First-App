@@ -1562,21 +1562,23 @@ function setupEventListeners() {
   const mapLocationBtn = document.getElementById("map-location-btn");
   if (mapLocationBtn) {
     mapLocationBtn.addEventListener("click", async () => {
-      showToast("📍 Recentering map on your GPS location...", "info");
+      showToast("📍 Zooming to your GPS location...", "info");
       await detectUserLocation();
       if (state.userLocation) {
         if (state.map) {
           state.map.setCenter(state.userLocation);
-          state.map.setZoom(14);
+          state.map.setZoom(15);
         }
         if (state.leafletMap) {
-          state.leafletMap.setView([state.userLocation.lat, state.userLocation.lng], 14);
+          state.leafletMap.setView([state.userLocation.lat, state.userLocation.lng], 15);
           if (typeof updateLeafletUserMarker === "function") {
             updateLeafletUserMarker();
           }
         }
+        performNearbySearch();
+      } else {
+        showToast("⚠️ Could not get your location. Please enable GPS.", "error");
       }
-      performNearbySearch();
     });
   }
 
@@ -1584,19 +1586,20 @@ function setupEventListeners() {
   // Mobile Navigation Tabs & Bottom Sheet Drawer Controller
   // ============================================================================
   const sidebarIsland = document.getElementById("sidebar-island");
-  const navTabLocator = document.getElementById("nav-tab-locator");
+  const navTabMedicalId = document.getElementById("nav-tab-medical-id");
   const navTabHelplines = document.getElementById("nav-tab-helplines");
   const navTabHealth = document.getElementById("nav-tab-health");
   const navTabSettings = document.getElementById("nav-tab-settings");
 
-  if (navTabLocator) {
-    navTabLocator.addEventListener("click", async () => {
-      if (sidebarIsland) sidebarIsland.classList.remove("drawer-expanded");
-      await detectUserLocation();
-      if (state.map && state.userLocation) {
-        state.map.setCenter(state.userLocation);
-      }
-      performNearbySearch();
+  if (navTabMedicalId) {
+    navTabMedicalId.addEventListener("click", () => {
+      const healthModal = document.getElementById("health-modal");
+      if (!healthModal) return;
+      // Open the health modal
+      try { if (!healthModal.open) healthModal.showModal(); } catch(e) { healthModal.setAttribute("open", ""); }
+      // Switch to the Medical ID tab
+      const medTab = healthModal.querySelector('[data-tab="medical-profile"]');
+      if (medTab) medTab.click();
     });
   }
 
