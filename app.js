@@ -1565,16 +1565,26 @@ function setupEventListeners() {
       showToast("📍 Zooming to your GPS location...", "info");
       await detectUserLocation();
       if (state.userLocation) {
+        const { lat, lng } = state.userLocation;
+
+        // 1. Google Maps JS API (interactive)
         if (state.map) {
-          state.map.setCenter(state.userLocation);
+          state.map.panTo({ lat, lng });
           state.map.setZoom(15);
-        }
-        if (state.leafletMap) {
-          state.leafletMap.setView([state.userLocation.lat, state.userLocation.lng], 15);
-          if (typeof updateLeafletUserMarker === "function") {
-            updateLeafletUserMarker();
+
+        // 2. Leaflet OSM (interactive)
+        } else if (state.leafletMap) {
+          state.leafletMap.setView([lat, lng], 15);
+          if (typeof updateLeafletUserMarker === "function") updateLeafletUserMarker();
+
+        // 3. Google Maps Embed iframe — rebuild src URL with new coords + zoom
+        } else {
+          const iframe = document.getElementById("gmaps-embed-iframe");
+          if (iframe) {
+            iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
           }
         }
+
         performNearbySearch();
       } else {
         showToast("⚠️ Could not get your location. Please enable GPS.", "error");
