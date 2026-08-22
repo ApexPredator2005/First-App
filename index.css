@@ -86,9 +86,9 @@ html, body {
 
 /* Category Pastel Glass Cards - Compact Proportions */
 .glass-card-hospital {
-  background: linear-gradient(135deg, rgba(255, 180, 180, 0.88), rgba(255, 140, 140, 0.88));
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 4px 14px rgba(255, 140, 140, 0.22);
+  background: linear-gradient(135deg, rgba(255, 85, 148, 0.92), rgba(244, 50, 120, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 4px 14px rgba(255, 85, 148, 0.35);
 }
 .glass-card-police {
   background: linear-gradient(135deg, rgba(160, 200, 255, 0.88), rgba(120, 170, 255, 0.88));
