@@ -1191,7 +1191,7 @@ function renderPlaceCard(place, index) {
         ${place.rating ? `<span class="text-amber-600 font-bold">⭐ ${place.rating}</span>` : ""}
         ${phoneNum ? `<a href="tel:${escapeHtml(phoneNum)}" class="text-blue-600 hover:underline flex items-center" onclick="event.stopPropagation();" title="Call ${escapeHtml(phoneNum)}"><span class="material-symbols-outlined text-[14px]">call</span></a>` : ""}
       </div>
-      <button class="btn-route px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-headline text-[11px] font-bold shadow-sm hover:shadow hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 flex items-center gap-1 border border-white/30" data-index="${index}">
+      <button class="btn-route px-3 py-1 rounded-full bg-[#FE7D6A] text-white font-headline text-[11px] font-bold shadow-sm hover:shadow hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 flex items-center gap-1 border border-white/40" style="background-color: #FE7D6A;" data-index="${index}">
         <span>⚡ Quick Route</span>
       </button>
     </div>
