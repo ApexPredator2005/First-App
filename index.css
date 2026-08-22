@@ -101,9 +101,9 @@ html, body {
   box-shadow: 0 4px 14px rgba(234, 88, 12, 0.32);
 }
 .glass-card-pharmacy {
-  background: linear-gradient(135deg, rgba(0, 255, 166, 0.88), rgba(0, 220, 140, 0.88));
+  background: linear-gradient(135deg, rgba(117, 251, 204, 0.90), rgba(72, 230, 175, 0.90));
   border: 1px solid rgba(255, 255, 255, 0.65);
-  box-shadow: 0 4px 14px rgba(0, 255, 166, 0.3);
+  box-shadow: 0 4px 14px rgba(117, 251, 204, 0.35);
 }
 .glass-card-vet {
   background: linear-gradient(135deg, rgba(220, 180, 255, 0.88), rgba(190, 140, 255, 0.88));
