@@ -1371,80 +1371,128 @@ function fitMapToResults() {
 }
 
 // ============================================================================
-// Shortest Route Navigation (DirectionsService + DirectionsRenderer)
-// Uses google.maps global namespace (available after Loader initializes SDK)
+// OSRM (Open Source Routing Machine) OpenStreetMap Driving Engine
+// ============================================================================
+async function fetchOSRMRoute(srcLat, srcLng, destLat, destLng) {
+  const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${srcLng},${srcLat};${destLng},${destLat}?overview=full&geometries=geojson&steps=true&annotations=true`;
+  const res = await fetch(osrmUrl);
+  if (!res.ok) throw new Error("OSRM API network error");
+  const data = await res.json();
+  if (!data || !data.routes || data.routes.length === 0) throw new Error("No driving route found");
+
+  const route = data.routes[0];
+  const leg = route.legs[0];
+
+  // Standardize steps so in-app turn-by-turn navigation engine works smoothly
+  const standardizedSteps = (leg.steps || []).map((step) => {
+    const maneuver = step.maneuver || {};
+    const type = maneuver.type || "turn";
+    const modifier = maneuver.modifier || "";
+    const name = step.name ? `onto ${step.name}` : "on current road";
+    
+    let instructions = "Continue straight";
+    let icon = "⬆️";
+
+    if (type === "depart") {
+      instructions = `Head towards destination ${step.name ? 'on ' + step.name : ''}`;
+      icon = "🚗";
+    } else if (type === "arrive") {
+      instructions = "You have arrived at destination!";
+      icon = "🏁";
+    } else if (modifier.includes("left")) {
+      instructions = `Turn left ${name}`;
+      icon = "⬅️";
+    } else if (modifier.includes("right")) {
+      instructions = `Turn right ${name}`;
+      icon = "➡️";
+    } else if (modifier.includes("u-turn") || modifier.includes("uturn")) {
+      instructions = `Make a U-Turn ${name}`;
+      icon = "↩️";
+    } else if (type === "roundabout" || type === "rotary") {
+      instructions = `Enter roundabout and take exit ${name}`;
+      icon = "🔄";
+    } else if (type === "merge") {
+      instructions = `Merge ${name}`;
+      icon = "↗️";
+    } else {
+      instructions = `Continue straight ${name}`;
+      icon = "⬆️";
+    }
+
+    const distM = Math.round(step.distance || 0);
+    const distText = distM >= 1000 ? `${(distM / 1000).toFixed(1)} km` : `${distM} m`;
+    const durMins = Math.max(1, Math.round((step.duration || 0) / 60));
+
+    return {
+      instructions,
+      icon,
+      distance: { text: distText, value: distM },
+      duration: { text: `${durMins} min`, value: step.duration },
+      end_location: {
+        lat: maneuver.location ? maneuver.location[1] : destLat,
+        lng: maneuver.location ? maneuver.location[0] : destLng
+      }
+    };
+  });
+
+  return {
+    isOSRM: true,
+    distanceKm: (route.distance / 1000).toFixed(1),
+    durationMins: Math.max(1, Math.round(route.duration / 60)),
+    coordinates: route.geometry.coordinates.map(c => [c[1], c[0]]), // [lat, lng]
+    steps: standardizedSteps,
+    raw: data
+  };
+}
+
+// ============================================================================
+// Shortest Route Navigation (DirectionsService / OSRM OpenStreetMap Engine)
 // ============================================================================
 async function calculateAndRenderRoute(place) {
+  if (!state.userLocation || !place) return;
+
+  const srcLat = typeof state.userLocation.lat === 'function' ? state.userLocation.lat() : Number(state.userLocation.lat);
+  const srcLng = typeof state.userLocation.lng === 'function' ? state.userLocation.lng() : Number(state.userLocation.lng);
+  const destLat = typeof place.location.lat === 'function' ? place.location.lat() : Number(place.location.lat);
+  const destLng = typeof place.location.lng === 'function' ? place.location.lng() : Number(place.location.lng);
+
   DOM.routeHud.classList.remove("hidden");
   DOM.routeDuration.textContent = "Calculating...";
   DOM.routeDistance.textContent = "-- km";
-  DOM.routeSummary.textContent = `Computing shortest driving route to ${place.displayName}...`;
-  
-  const turnStepsBox = document.getElementById("turn-steps-box");
+  DOM.routeSummary.textContent = `Computing shortest route to ${place.displayName || "facility"}...`;
 
   state.navDestination = place;
+  const navUrl = `https://www.google.com/maps/dir/?api=1&origin=${srcLat},${srcLng}&destination=${destLat},${destLng}&travelmode=driving`;
+  if (DOM.navExternalBtn) DOM.navExternalBtn.setAttribute("href", navUrl);
 
-  // Leaflet OpenStreetMap Mode
-  if (state.leafletMap && window.L) {
-    if (state.leafletPolyline) {
-      state.leafletMap.removeLayer(state.leafletPolyline);
-      state.leafletPolyline = null;
-    }
+  // Strategy 1: Google Maps DirectionsService (if interactive Google Maps is active)
+  if (window.google && state.map && !state.googleMapsAuthFailed) {
     try {
-      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${srcLng},${srcLat};${destLng},${destLat}?overview=full&geometries=geojson&steps=true`;
-      const res = await fetch(osrmUrl);
-      const data = await res.json();
-      if (data && data.routes && data.routes.length > 0) {
-        const route = data.routes[0];
-        const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-
-        state.leafletPolyline = L.polyline(coords, { color: "#007aff", weight: 6, opacity: 0.9 }).addTo(state.leafletMap);
-        state.leafletMap.fitBounds(state.leafletPolyline.getBounds(), { padding: [50, 50] });
-
-        const distKm = (route.distance / 1000).toFixed(1);
-        const approxMins = Math.round(route.duration / 60);
-
-        DOM.routeDuration.textContent = `~${approxMins} min`;
-        DOM.routeDistance.textContent = `${distKm} km`;
-        DOM.routeSummary.textContent = `OSRM OpenStreetMap Driving Route`;
-
-        state.lastRouteResponse = data;
-        const navUrl = `https://www.google.com/maps/dir/?api=1&origin=${srcLat},${srcLng}&destination=${destLat},${destLng}&travelmode=driving`;
-        DOM.navExternalBtn.setAttribute("href", navUrl);
+      if (!state.directionsService) {
+        state.directionsService = new google.maps.DirectionsService();
       }
-    } catch(e) {
-      console.warn("Leaflet route error:", e);
-    }
-    return;
-  }
+      if (!state.directionsRenderer) {
+        state.directionsRenderer = new google.maps.DirectionsRenderer({
+          map: state.map,
+          suppressMarkers: true,
+          polylineOptions: { strokeColor: "#2563eb", strokeOpacity: 0.9, strokeWeight: 6 }
+        });
+      } else {
+        state.directionsRenderer.setMap(state.map);
+      }
 
-  // Google Maps Mode
-  if (window.google && state.map) {
-    if (!state.directionsService) {
-      state.directionsService = new google.maps.DirectionsService();
-    }
-    if (!state.directionsRenderer) {
-      state.directionsRenderer = new google.maps.DirectionsRenderer({
-        map: state.map,
-        suppressMarkers: true,
-        polylineOptions: { strokeColor: "#00f2fe", strokeOpacity: 0.92, strokeWeight: 7 }
-      });
-    } else {
-      state.directionsRenderer.setMap(state.map);
-    }
+      if (state.currentRoutePolyline) {
+        state.currentRoutePolyline.setMap(null);
+        state.currentRoutePolyline = null;
+      }
 
-    if (state.currentRoutePolyline) {
-      state.currentRoutePolyline.setMap(null);
-      state.currentRoutePolyline = null;
-    }
-
-    try {
       const request = {
-        origin: state.userLocation,
-        destination: place.location,
+        origin: { lat: srcLat, lng: srcLng },
+        destination: { lat: destLat, lng: destLng },
         travelMode: google.maps.TravelMode.DRIVING,
         provideRouteAlternatives: false
       };
+
       const response = await new Promise((res, rej) => {
         state.directionsService.route(request, (result, status) => {
           if (status === "OK") res(result);
@@ -1461,14 +1509,55 @@ async function calculateAndRenderRoute(place) {
         DOM.routeDistance.textContent = leg.distance ? leg.distance.text : "-- km";
         DOM.routeSummary.textContent = `Shortest route via ${bestRoute.summary || "main road"}.`;
 
-        const navUrl = `https://www.google.com/maps/dir/?api=1&origin=${srcLat},${srcLng}&destination=${destLat},${destLng}&travelmode=driving`;
-        DOM.navExternalBtn.setAttribute("href", navUrl);
-
         state.lastRouteResponse = response;
+        return;
       }
     } catch(err) {
-      console.warn("DirectionsService failed, fallback to OSRM:", err.message);
+      console.warn("Google DirectionsService failed or restricted, using OSRM OpenStreetMap Engine:", err.message);
     }
+  }
+
+  // Strategy 2: OSRM OpenStreetMap Driving Engine (Free, Global, No API Key)
+  try {
+    const osrmRoute = await fetchOSRMRoute(srcLat, srcLng, destLat, destLng);
+    state.lastRouteResponse = osrmRoute;
+
+    DOM.routeDuration.textContent = `~${osrmRoute.durationMins} min`;
+    DOM.routeDistance.textContent = `${osrmRoute.distanceKm} km`;
+    DOM.routeSummary.textContent = `OSRM OpenStreetMap Driving Route`;
+
+    // Render polyline on Leaflet map
+    if (state.leafletMap && window.L) {
+      if (state.leafletPolyline) {
+        state.leafletMap.removeLayer(state.leafletPolyline);
+      }
+      state.leafletPolyline = L.polyline(osrmRoute.coordinates, { color: "#2563eb", weight: 6, opacity: 0.9 }).addTo(state.leafletMap);
+      state.leafletMap.fitBounds(state.leafletPolyline.getBounds(), { padding: [50, 50] });
+    }
+
+    // Render polyline on Google Map if vector map is available
+    if (window.google && state.map) {
+      if (state.currentRoutePolyline) {
+        state.currentRoutePolyline.setMap(null);
+      }
+      const gCoords = osrmRoute.coordinates.map(c => ({ lat: c[0], lng: c[1] }));
+      state.currentRoutePolyline = new google.maps.Polyline({
+        path: gCoords,
+        geodesic: true,
+        strokeColor: "#2563eb",
+        strokeOpacity: 0.9,
+        strokeWeight: 6,
+        map: state.map
+      });
+      const bounds = new google.maps.LatLngBounds();
+      gCoords.forEach(c => bounds.extend(c));
+      state.map.fitBounds(bounds, { top: 70, right: 70, bottom: 70, left: 70 });
+    }
+  } catch (osrmErr) {
+    console.warn("OSRM routing fallback failed:", osrmErr);
+    DOM.routeDuration.textContent = "Route Ready";
+    DOM.routeDistance.textContent = "Direct";
+    DOM.routeSummary.textContent = `Tap 'Start Nav' or open Google Maps for driving directions.`;
   }
 }
 
@@ -2629,30 +2718,39 @@ function sendSOSLocation() {
 }
 
 // ============================================================================
-// In-App Turn-by-Turn Navigation
+// In-App Turn-by-Turn Driving Navigation Engine (OSRM & Web Speech API)
 // ============================================================================
+function speakNavInstruction(text) {
+  if (!window.speechSynthesis) return;
+  try {
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/<[^>]*>/g, "");
+    const utter = new SpeechSynthesisUtterance(cleanText);
+    utter.rate = 1.05;
+    utter.pitch = 1.0;
+    window.speechSynthesis.speak(utter);
+  } catch(e) {}
+}
+
 function setupNavigation() {
   const startNavBtn = document.getElementById("start-nav-btn");
   const exitNavBtn = document.getElementById("exit-nav-btn");
 
   if (startNavBtn) {
     startNavBtn.addEventListener("click", async () => {
-      // Prompt user to download offline map if not downloaded yet
-      const meta = await getOfflineMeta();
-      if (!meta) {
-        const confirmDownload = confirm("📥 15 km Offline Map Not Installed!\n\nWould you like to download the 15 km Offline Emergency Map Pack now for navigation in dead zones?");
-        if (confirmDownload) {
-          const settingsModal = document.getElementById("settings-modal");
-          if (settingsModal) settingsModal.showModal();
-          download15kmOfflineMapPack();
-          return;
-        }
+      if (!state.navDestination) {
+        showToast("⚠️ Please select an emergency facility first!", "warning");
+        return;
+      }
+
+      // If route not ready yet, calculate on the fly
+      if (!state.lastRouteResponse) {
+        showToast("Calculating route to destination...", "info");
+        await calculateAndRenderRoute(state.navDestination);
       }
 
       if (state.lastRouteResponse && state.navDestination) {
         startInAppNavigation(state.lastRouteResponse, state.navDestination);
-      } else {
-        alert("Please select an emergency facility and calculate route first!");
       }
     });
   }
@@ -2661,7 +2759,7 @@ function setupNavigation() {
     exitNavBtn.addEventListener("click", () => stopInAppNavigation());
   }
 
-  // Intercept Google Maps external button click to guarantee real Google Maps routing
+  // Intercept Google Maps external button click
   DOM.navExternalBtn?.addEventListener("click", (e) => {
     e.preventDefault();
     if (state.navDestination && state.userLocation) {
@@ -2679,65 +2777,88 @@ function setupNavigation() {
 
 function startInAppNavigation(response, place) {
   const overlay = document.getElementById("nav-overlay");
-  overlay.classList.remove("hidden");
+  if (overlay) overlay.classList.remove("hidden");
   state.navActive = true;
 
-  const route = response.routes[0];
-  const leg = route.legs[0];
-  state.navSteps = leg.steps || [];
+  // Extract steps based on whether it's OSRM or Google Maps
+  if (response.isOSRM) {
+    state.navSteps = response.steps || [];
+    document.getElementById("nav-eta-value").textContent = `~${response.durationMins} min`;
+    document.getElementById("nav-remaining-value").textContent = `${response.distanceKm} km`;
+  } else if (response.routes && response.routes[0]) {
+    const route = response.routes[0];
+    const leg = route.legs ? route.legs[0] : null;
+    state.navSteps = leg ? (leg.steps || []) : [];
+    document.getElementById("nav-eta-value").textContent = leg?.duration ? leg.duration.text : "--";
+    document.getElementById("nav-remaining-value").textContent = leg?.distance ? leg.distance.text : "--";
+  }
+
   state.navCurrentStepIndex = 0;
-
-  // Set ETA and distance
-  document.getElementById("nav-eta-value").textContent = leg.duration ? leg.duration.text : "--";
-  document.getElementById("nav-remaining-value").textContent = leg.distance ? leg.distance.text : "--";
-
   updateNavStep();
 
-  // Start GPS tracking for step advancement
+  // Voice announcement on start
+  const destName = place.displayName || "destination";
+  speakNavInstruction(`Starting navigation to ${destName}. ${state.navSteps[0]?.instructions || ""}`);
+
+  // Start live GPS tracking for real-time turn advancement
   if (navigator.geolocation) {
     state.navWatchId = navigator.geolocation.watchPosition(
       (pos) => {
         const userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         state.userLocation = userPos;
+        if (state.map) state.map.panTo(userPos);
+        if (state.leafletMap) state.leafletMap.panTo([userPos.lat, userPos.lng]);
         advanceNavStep(userPos);
       },
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 2000 }
+      (err) => console.warn("GPS tracking error during navigation:", err),
+      { enableHighAccuracy: true, maximumAge: 1000 }
     );
   }
 }
 
 function updateNavStep() {
+  if (!state.navSteps || state.navSteps.length === 0) return;
+
   if (state.navCurrentStepIndex >= state.navSteps.length) {
-    document.getElementById("nav-instruction").innerHTML = "🎉 <strong>You have arrived!</strong>";
-    document.getElementById("nav-step-dist").textContent = "";
+    document.getElementById("nav-instruction").innerHTML = "🎉 <strong>You have arrived at your destination!</strong>";
+    document.getElementById("nav-step-dist").textContent = "Arrived";
     document.getElementById("nav-step-icon").textContent = "🏁";
-    document.getElementById("nav-next-text").textContent = "Destination reached";
+    document.getElementById("nav-next-text").textContent = "Emergency unit reached";
+    speakNavInstruction("You have arrived at your destination.");
     return;
   }
 
   const step = state.navSteps[state.navCurrentStepIndex];
-  document.getElementById("nav-instruction").innerHTML = step.instructions || "Continue...";
-  document.getElementById("nav-step-dist").textContent = step.distance ? step.distance.text : "";
+  const stepText = step.instructions || "Continue on road";
+  document.getElementById("nav-instruction").innerHTML = stepText;
+  
+  const distText = step.distance ? (step.distance.text || `${step.distance}m`) : "";
+  document.getElementById("nav-step-dist").textContent = distText;
 
-  // Pick direction icon
-  const instr = (step.instructions || "").toLowerCase();
-  let icon = "➡️";
-  if (instr.includes("left")) icon = "⬅️";
-  else if (instr.includes("right")) icon = "➡️";
-  else if (instr.includes("u-turn")) icon = "↩️";
-  else if (instr.includes("roundabout")) icon = "🔄";
-  else if (instr.includes("merge")) icon = "↗️";
-  else if (instr.includes("straight") || instr.includes("continue")) icon = "⬆️";
+  // Icon
+  let icon = step.icon || "⬆️";
+  if (!step.icon) {
+    const instr = (step.instructions || "").toLowerCase();
+    if (instr.includes("left")) icon = "⬅️";
+    else if (instr.includes("right")) icon = "➡️";
+    else if (instr.includes("u-turn") || instr.includes("uturn")) icon = "↩️";
+    else if (instr.includes("roundabout") || instr.includes("rotary")) icon = "🔄";
+    else if (instr.includes("merge")) icon = "↗️";
+    else if (instr.includes("arrive")) icon = "🏁";
+    else icon = "⬆️";
+  }
   document.getElementById("nav-step-icon").textContent = icon;
 
   // Next step preview
   if (state.navCurrentStepIndex + 1 < state.navSteps.length) {
     const next = state.navSteps[state.navCurrentStepIndex + 1];
-    document.getElementById("nav-next-text").innerHTML = next.instructions || "Continue";
+    document.getElementById("nav-next-text").innerHTML = `Then: ${next.instructions || "Continue"}`;
   } else {
-    document.getElementById("nav-next-text").textContent = "Arrive at destination";
+    document.getElementById("nav-next-text").textContent = "Destination reached ahead";
   }
+
+  // Voice announcement
+  speakNavInstruction(`In ${distText}, ${stepText}`);
 }
 
 function advanceNavStep(userPos) {
@@ -2762,10 +2883,14 @@ function advanceNavStep(userPos) {
 
 function stopInAppNavigation() {
   const overlay = document.getElementById("nav-overlay");
-  overlay.classList.add("hidden");
+  if (overlay) overlay.classList.add("hidden");
   state.navActive = false;
   state.navSteps = [];
   state.navCurrentStepIndex = 0;
+
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
 
   if (state.navWatchId) {
     navigator.geolocation.clearWatch(state.navWatchId);
