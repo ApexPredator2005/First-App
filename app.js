@@ -286,7 +286,7 @@ async function getCountForCategory(category) {
   if (cached && cached.length > 0) {
     const filteredCached = applyCategoryFilters(cached, category).filter(p => {
       const dist = getApproxDistance(state.userLocation, p.location);
-      return dist <= Number(state.searchRadius);
+      return dist <= Number(state.searchRadius) && isFacilityCurrentlyOpen(p, category);
     });
     return filteredCached.length;
   }
@@ -299,7 +299,7 @@ async function getCountForCategory(category) {
     try {
       const { Place } = state.libraries.places;
       const request = {
-        fields: ["location", "displayName"],
+        fields: ["location", "displayName", "currentOpeningHours", "businessStatus"],
         locationRestriction: { center: state.userLocation, radius: Number(state.searchRadius) },
         includedPrimaryTypes: [category]
       };
@@ -336,7 +336,7 @@ async function getCountForCategory(category) {
 
   const filtered = applyCategoryFilters(merged, category).filter(p => {
     const dist = getApproxDistance(state.userLocation, p.location);
-    return dist <= Number(state.searchRadius);
+    return dist <= Number(state.searchRadius) && isFacilityCurrentlyOpen(p, category);
   });
   return filtered.length;
 }
@@ -1055,6 +1055,84 @@ function applyCategoryFilters(places, category) {
 
     return true;
   });
+// ============================================================================
+// Real-Time Facility Operational Status ("Open Now" Evaluator)
+// ============================================================================
+function parseAndCheckOSMHours(hoursStr) {
+  if (!hoursStr || typeof hoursStr !== "string") return true;
+  const hLower = hoursStr.toLowerCase();
+  if (hLower.includes("24/7") || hLower.includes("twenty-four")) return true;
+  if (hLower.includes("off") || hLower.includes("closed")) return false;
+
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMin = now.getMinutes();
+  const currentTotalMins = currentHour * 60 + currentMin;
+
+  // Match time ranges like "09:00-21:00", "8:00-22:00", "09:00 - 20:00"
+  const timeMatch = hLower.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  if (timeMatch) {
+    const startMins = parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2], 10);
+    const endMins = parseInt(timeMatch[3], 10) * 60 + parseInt(timeMatch[4], 10);
+    if (endMins >= startMins) {
+      return currentTotalMins >= startMins && currentTotalMins <= endMins;
+    } else {
+      // Overnight schedule e.g. 20:00-04:00
+      return currentTotalMins >= startMins || currentTotalMins <= endMins;
+    }
+  }
+
+  return true;
+}
+
+function isFacilityCurrentlyOpen(place, category) {
+  if (!place) return false;
+
+  // 1. Google Places API (New & Classic) real-time opening hours
+  if (place.currentOpeningHours) {
+    if (place.currentOpeningHours.openNow === true) return true;
+    if (place.currentOpeningHours.openNow === false) return false;
+  }
+  if (place.openingHours && typeof place.openingHours.isOpen === 'function') {
+    return place.openingHours.isOpen();
+  }
+
+  // 2. OpenStreetMap tags
+  const tags = place.tags || {};
+  const osmHours = tags.opening_hours || place.opening_hours || "";
+  if (osmHours) {
+    return parseAndCheckOSMHours(osmHours);
+  }
+
+  if (tags.emergency === "yes" || tags["emergency:service"] === "yes") {
+    return true;
+  }
+
+  // 3. Business operational status
+  if (place.businessStatus === "CLOSED_PERMANENTLY" || place.businessStatus === "CLOSED_TEMPORARILY") {
+    return false;
+  }
+
+  // 4. Category defaults for emergency public services (Hospitals, Police, Fire Stations)
+  if (category === "hospital" || category === "police" || category === "fire_station") {
+    if (place.currentOpeningHours && place.currentOpeningHours.openNow === false) {
+      return false;
+    }
+    return true;
+  }
+
+  // 5. Commercial services (Pharmacies, Vet Clinics, Blood Banks)
+  // Check against reasonable local operating hours (8:00 AM - 10:30 PM) if hours not tagged
+  const currentHour = new Date().getHours();
+  if (category === "pharmacy" || category === "veterinary_care" || category === "blood_bank") {
+    if (currentHour >= 23 || currentHour < 6) {
+      // Overnight: only include if explicitly tagged 24/7
+      return Boolean(osmHours && (osmHours.includes("24/7") || osmHours.includes("24")));
+    }
+    return true;
+  }
+
+  return true;
 }
 
 let activeSearchId = 0;
@@ -1085,6 +1163,9 @@ function processAndRenderResults(places, category, searchId, fitBounds = true) {
 
   // Apply strict category type filter
   filtered = applyCategoryFilters(filtered, category);
+
+  // Apply real-time "Open Now" verification filter
+  filtered = filtered.filter(p => isFacilityCurrentlyOpen(p, category));
 
   state.placesList = filtered;
 
@@ -2726,21 +2807,34 @@ function deactivateSOS() {
 
 function sendSOSLocation() {
   if (!state.userLocation) return;
-  const lat = state.userLocation.lat;
-  const lng = state.userLocation.lng;
-  const time = new Date().toLocaleTimeString();
+  const lat = typeof state.userLocation.lat === "function" ? state.userLocation.lat() : state.userLocation.lat;
+  const lng = typeof state.userLocation.lng === "function" ? state.userLocation.lng() : state.userLocation.lng;
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const mapLink = `https://www.google.com/maps?q=${lat},${lng}`;
   
   const profile = JSON.parse(localStorage.getItem("RESQNOW_PROFILE") || "{}");
   const customMessage = profile["profile-sos-message"] ? `${profile["profile-sos-message"]}\n\n` : "";
   
-  let msg = `${customMessage}🆘 *RESQNOW SOS ALERT*\n⏰ ${time}\n📍 User Live Location: ${mapLink}\n🔗 Lat: ${lat}, Lng: ${lng}`;
+  let msg = `${customMessage}🆘 *RESQNOW LIVE EMERGENCY SOS ALERT*\n⏰ Time: ${time}\n📍 Sender Live GPS: ${mapLink}\n🌐 GPS Coords: ${Number(lat).toFixed(5)}°, ${Number(lng).toFixed(5)}°`;
 
-  // Include target facility location if user selected or is navigating to one
+  // Include Medical ID info if stored
+  const medicalDetails = [];
+  if (profile["profile-name"]) medicalDetails.push(`👤 Patient: ${profile["profile-name"]}`);
+  if (profile["profile-blood-group"]) medicalDetails.push(`🩸 Blood Group: ${profile["profile-blood-group"]}`);
+  if (profile["profile-allergies"]) medicalDetails.push(`⚠️ Allergies: ${profile["profile-allergies"]}`);
+  if (profile["profile-conditions"]) medicalDetails.push(`📋 Medical Conditions: ${profile["profile-conditions"]}`);
+  
+  if (medicalDetails.length > 0) {
+    msg += `\n\n🩺 *PATIENT MEDICAL ID:*\n` + medicalDetails.join("\n");
+  }
+
+  // Include target facility location and live navigation telemetry if user is navigating or selected a facility
   const dest = state.navDestination || state.selectedPlace;
   if (dest) {
     const destName = dest.displayName || dest.name || "Emergency Facility";
-    const destAddr = dest.formattedAddress || "";
+    const destAddr = dest.formattedAddress || dest.vicinity || "Near facility location";
+    const destPhone = dest.internationalPhoneNumber || dest.nationalPhoneNumber || null;
+    
     let destLat = "";
     let destLng = "";
     if (dest.location) {
@@ -2749,9 +2843,18 @@ function sendSOSLocation() {
     }
     const destLink = (destLat && destLng) ? `https://www.google.com/maps?q=${destLat},${destLng}` : "";
     
-    msg += `\n\n🏥 *TARGET DESTINATION (FACILITY):*\n🏥 ${destName}`;
-    if (destAddr) msg += `\n📫 Address: ${destAddr}`;
-    if (destLink) msg += `\n📍 Facility Location: ${destLink}`;
+    const isNavigating = state.navActive;
+    const etaVal = document.getElementById("nav-eta-value")?.textContent || document.getElementById("route-duration")?.textContent || "";
+    const distVal = document.getElementById("nav-remaining-value")?.textContent || document.getElementById("route-distance")?.textContent || "";
+
+    msg += `\n\n🏥 *DESTINATION FACILITY DETAILS:*`;
+    msg += `\n🚗 Status: ${isNavigating ? "▶️ IN-APP LIVE NAVIGATION ACTIVE (En Route)" : "📍 Emergency Facility Selected"}`;
+    msg += `\n🏥 Facility: ${destName}`;
+    msg += `\n📫 Address: ${destAddr}`;
+    if (destPhone) msg += `\n📞 Facility Phone: ${destPhone}`;
+    if (distVal && distVal !== "-- km") msg += `\n📏 Distance to Facility: ${distVal}`;
+    if (etaVal && etaVal !== "--") msg += `\n⏱️ Est. Arrival Time: ${etaVal}`;
+    if (destLink) msg += `\n🗺️ Direct Hospital Route: ${destLink}`;
   }
 
   const cleanNum = state.sosPhoneNumber ? state.sosPhoneNumber.replace(/[^\d+]/g, "") : "";
