@@ -280,6 +280,19 @@ function initializeAllPillCounts() {
 
 async function getCountForCategory(category) {
   if (!state.userLocation) return 0;
+
+  // Check cache first for instant count without extra API calls
+  const cached = googlePlacesCache.get(category, state.userLocation.lat, state.userLocation.lng, state.searchRadius);
+  if (cached && cached.length > 0) {
+    const filteredCached = applyCategoryFilters(cached, category).filter(p => {
+      const dist = getApproxDistance(state.userLocation, p.location);
+      return dist <= Number(state.searchRadius);
+    });
+    return filteredCached.length;
+  }
+
+  const existingPlaces = googlePlacesCache.getExistingResults(category, state.userLocation.lat, state.userLocation.lng);
+  let places = [];
   
   // Try Places API (New) first
   if (state.libraries.places && state.libraries.places.Place) {
@@ -292,11 +305,7 @@ async function getCountForCategory(category) {
       };
       const res = await Place.searchNearby(request);
       if (res && res.places && res.places.length > 0) {
-        const filtered = applyCategoryFilters(res.places, category).filter(p => {
-          const dist = getApproxDistance(state.userLocation, p.location);
-          return dist <= Number(state.searchRadius);
-        });
-        if (filtered.length > 0) return filtered.length;
+        places = res.places;
       }
     } catch(e) {
       const errMsg = e?.message || String(e);
@@ -307,26 +316,29 @@ async function getCountForCategory(category) {
   }
   
   // Try Classic PlacesService
-  const classicResults = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius);
-  if (classicResults && classicResults.length > 0) {
-    const filtered = applyCategoryFilters(classicResults, category).filter(p => {
-      const dist = getApproxDistance(state.userLocation, p.location);
-      return dist <= Number(state.searchRadius);
-    });
-    if (filtered.length > 0) return filtered.length;
+  if (!places || places.length === 0) {
+    const classicResults = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius);
+    if (classicResults && classicResults.length > 0) {
+      places = classicResults;
+    }
   }
   
   // Try Overpass API (Real OpenStreetMap data)
-  const osmResults = await searchWithOverpassAPI(category, state.userLocation, state.searchRadius);
-  if (osmResults && osmResults.length > 0) {
-    const filtered = applyCategoryFilters(osmResults, category).filter(p => {
-      const dist = getApproxDistance(state.userLocation, p.location);
-      return dist <= Number(state.searchRadius);
-    });
-    return filtered.length;
+  if (!places || places.length === 0) {
+    const osmResults = await searchWithOverpassAPI(category, state.userLocation, state.searchRadius);
+    if (osmResults && osmResults.length > 0) {
+      places = osmResults;
+    }
   }
 
-  return 0;
+  const merged = mergeAndDeduplicatePlaces(existingPlaces, places);
+  googlePlacesCache.set(category, state.userLocation.lat, state.userLocation.lng, state.searchRadius, merged);
+
+  const filtered = applyCategoryFilters(merged, category).filter(p => {
+    const dist = getApproxDistance(state.userLocation, p.location);
+    return dist <= Number(state.searchRadius);
+  });
+  return filtered.length;
 }
 
 // ============================================================================
@@ -673,7 +685,52 @@ const OSM_CATEGORY_MAP = {
 
 const overpassCache = new Map();
 
-// Session Cache for Google Places / OpenStreetMap searches
+// Unique Key generator for place deduplication
+function getPlaceUniqueKey(place) {
+  if (!place) return "";
+  if (place.id) return `id_${place.id}`;
+  if (place.place_id) return `pid_${place.place_id}`;
+  if (place.osm_id) return `osm_${place.osm_id}`;
+  
+  // Coordinate + Name fallback
+  let lat = 0, lng = 0;
+  if (place.location) {
+    lat = typeof place.location.lat === "function" ? place.location.lat() : Number(place.location.lat || 0);
+    lng = typeof place.location.lng === "function" ? place.location.lng() : Number(place.location.lng || 0);
+  }
+  const name = (typeof place.displayName === "string" ? place.displayName : (place.displayName?.text || place.name || "")).toLowerCase().trim();
+  return `${name}_${lat.toFixed(4)}_${lng.toFixed(4)}`;
+}
+
+// Seamless cumulative merge & deduplication for radius expansion
+function mergeAndDeduplicatePlaces(existingList = [], newList = []) {
+  const merged = [];
+  const seenKeys = new Set();
+
+  // 1. Preserve existing inner-radius places
+  for (const place of existingList) {
+    if (!place) continue;
+    const key = getPlaceUniqueKey(place);
+    if (key && !seenKeys.has(key)) {
+      seenKeys.add(key);
+      merged.push(place);
+    }
+  }
+
+  // 2. Append new outer-radius places without duplicating
+  for (const place of newList) {
+    if (!place) continue;
+    const key = getPlaceUniqueKey(place);
+    if (key && !seenKeys.has(key)) {
+      seenKeys.add(key);
+      merged.push(place);
+    }
+  }
+
+  return merged;
+}
+
+// Session Cache for Google Places / OpenStreetMap searches with Cumulative Radius Support
 const googlePlacesCache = {
   // Key format: `${category}_${lat.toFixed(3)}_${lng.toFixed(3)}`
   // Value format: { timestamp: Number, radius: Number, results: Array }
@@ -681,10 +738,20 @@ const googlePlacesCache = {
 
   set(category, lat, lng, radius, results) {
     const key = `${category}_${lat.toFixed(3)}_${lng.toFixed(3)}`;
+    const existing = this.data.get(key);
+    
+    // Cumulatively merge with existing results so inner-radius facilities are never lost
+    let mergedResults = results || [];
+    if (existing && Array.isArray(existing.results) && existing.results.length > 0) {
+      mergedResults = mergeAndDeduplicatePlaces(existing.results, results || []);
+    }
+
+    const maxRadius = existing ? Math.max(existing.radius, Number(radius)) : Number(radius);
+
     this.data.set(key, {
       timestamp: Date.now(),
-      radius: Number(radius),
-      results: results
+      radius: maxRadius,
+      results: mergedResults
     });
   },
 
@@ -702,7 +769,7 @@ const googlePlacesCache = {
 
     // Smart Radius Rule: 
     // We can reuse the cache if the cached radius is >= targetRadius.
-    // If targetRadius is larger, we need to query Google to find the new outer facilities.
+    // If targetRadius is larger, we query to find outer ring facilities and merge them.
     if (cached.radius >= Number(targetRadius)) {
       // Return a filtered copy containing only results within the target radius
       return cached.results.filter(p => {
@@ -712,6 +779,12 @@ const googlePlacesCache = {
     }
 
     return null;
+  },
+
+  getExistingResults(category, lat, lng) {
+    const key = `${category}_${lat.toFixed(3)}_${lng.toFixed(3)}`;
+    const cached = this.data.get(key);
+    return cached && Array.isArray(cached.results) ? cached.results : [];
   }
 };
 
@@ -1084,6 +1157,9 @@ async function performNearbySearch() {
     return;
   }
 
+  // Retrieve any existing inner-radius results for cumulative expansion
+  const existingPlaces = googlePlacesCache.getExistingResults(category, state.userLocation.lat, state.userLocation.lng);
+
   DOM.feedStatus.textContent = `Scanning for nearby ${meta.label}...`;
   DOM.spinner.style.display = "inline-block";
   DOM.placesFeed.innerHTML = "";
@@ -1135,10 +1211,10 @@ async function performNearbySearch() {
   // Strategy 2: Classic PlacesService
   if (!places || places.length === 0) {
     places = await searchWithClassicPlacesService(category, state.userLocation, state.searchRadius, (updatedPlaces) => {
-      // Save the pagination-updated list to the cache
-      googlePlacesCache.set(category, state.userLocation.lat, state.userLocation.lng, state.searchRadius, updatedPlaces);
-      // Background callback to render additional pages (Page 2 & 3) dynamically
-      processAndRenderResults(updatedPlaces, category, searchId, false);
+      // Cumulatively merge with existing inner results
+      const combined = mergeAndDeduplicatePlaces(existingPlaces, updatedPlaces);
+      googlePlacesCache.set(category, state.userLocation.lat, state.userLocation.lng, state.searchRadius, combined);
+      processAndRenderResults(combined, category, searchId, false);
     });
   }
 
@@ -1147,11 +1223,14 @@ async function performNearbySearch() {
     places = await searchWithOverpassAPI(category, state.userLocation, state.searchRadius);
   }
 
-  // Save initial results to the cache
-  googlePlacesCache.set(category, state.userLocation.lat, state.userLocation.lng, state.searchRadius, places);
+  // Cumulatively merge newly fetched places with all known inner-radius places
+  const allMergedPlaces = mergeAndDeduplicatePlaces(existingPlaces, places);
 
-  // Initial render of page 1 results
-  processAndRenderResults(places, category, searchId, true);
+  // Save cumulative results to cache
+  googlePlacesCache.set(category, state.userLocation.lat, state.userLocation.lng, state.searchRadius, allMergedPlaces);
+
+  // Initial render of merged results
+  processAndRenderResults(allMergedPlaces, category, searchId, true);
 }
 
 function renderPlaceCard(place, index) {
@@ -1545,10 +1624,11 @@ function setupEventListeners() {
     });
   });
 
-  // Radius selector
+  // Radius selector with automatic cumulative count updates
   DOM.radiusSelect.addEventListener("change", (e) => {
     state.searchRadius = parseInt(e.target.value);
     performNearbySearch();
+    initializeAllPillCounts();
   });
 
   // GPS Rescan & Floating Arrow Button
