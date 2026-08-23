@@ -37,7 +37,13 @@ const state = {
   navDestination: null,
   lastRouteResponse: null,
   // Operational Filter State
-  filterOpenNowOnly: true
+  filterOpenNowOnly: true,
+  // Panic Safety Timer (Dead Man's Switch) State
+  panicTimerActive: false,
+  panicTimerIntervalMins: 20,
+  panicTimerSecondsRemaining: 1200,
+  panicTimerIntervalId: null,
+  panicTimerWarnBeeped: false
 };
 
 const CATEGORY_META = {
@@ -1819,6 +1825,7 @@ function closeModalSmooth(modal) {
 
 function setupEventListeners() {
   try { setupSOS(); } catch(e) { console.warn("SOS setup error:", e); }
+  try { setupPanicTimer(); } catch(e) { console.warn("Panic timer setup error:", e); }
   try { setupNavigation(); } catch(e) { console.warn("Navigation setup error:", e); }
   try { setupHealthModal(); } catch(e) { console.warn("Health modal setup error:", e); }
   try { setupHealthQuotes(); } catch(e) { console.warn("Health quotes setup error:", e); }
@@ -2792,6 +2799,159 @@ function setupSOS() {
       }
     });
   });
+}
+
+// ============================================================================
+// Panic Safety Timer & Dead Man's Switch Engine (20, 40, 60 min check-ins)
+// ============================================================================
+function playWarningBeep() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.5);
+  } catch(e) {}
+}
+
+function setupPanicTimer() {
+  const panicConfig = document.getElementById("panic-timer-config");
+  const panicActiveCard = document.getElementById("panic-timer-active-card");
+  const intervalBtns = document.querySelectorAll(".panic-interval-btn");
+  const startBtn = document.getElementById("start-panic-timer-btn");
+  const resetBtn = document.getElementById("reset-panic-timer-btn");
+  const bannerResetBtn = document.getElementById("banner-reset-panic-btn");
+  const stopBtn = document.getElementById("stop-panic-timer-btn");
+  const triggerNowBtn = document.getElementById("panic-trigger-now-btn");
+  const countdownDisplay = document.getElementById("panic-countdown-display");
+  const bannerCountdown = document.getElementById("panic-banner-countdown");
+  const banner = document.getElementById("panic-timer-banner");
+  const bannerOpenBtn = document.getElementById("banner-open-panic-btn");
+
+  let selectedMins = 20;
+
+  intervalBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      intervalBtns.forEach(b => {
+        b.classList.remove("active", "border-red-300", "bg-red-50", "text-red-700");
+        b.classList.add("border-slate-200", "bg-white/70", "text-slate-700");
+      });
+      btn.classList.add("active", "border-red-300", "bg-red-50", "text-red-700");
+      btn.classList.remove("border-slate-200", "bg-white/70", "text-slate-700");
+      selectedMins = parseInt(btn.getAttribute("data-mins") || "20", 10);
+    });
+  });
+
+  function formatTime(totalSecs) {
+    const mins = Math.floor(Math.max(0, totalSecs) / 60);
+    const secs = Math.max(0, totalSecs) % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  function updateDisplays() {
+    const text = formatTime(state.panicTimerSecondsRemaining);
+    if (countdownDisplay) countdownDisplay.textContent = text;
+    if (bannerCountdown) bannerCountdown.textContent = text;
+  }
+
+  function armGuardian(mins) {
+    state.panicTimerActive = true;
+    state.panicTimerIntervalMins = mins;
+    state.panicTimerSecondsRemaining = mins * 60;
+    state.panicTimerWarnBeeped = false;
+
+    if (panicConfig) panicConfig.classList.add("hidden");
+    if (panicActiveCard) panicActiveCard.classList.remove("hidden");
+    if (banner) banner.classList.remove("hidden");
+
+    updateDisplays();
+
+    showToast(`⏱️ Panic Guardian armed for ${mins} min!`, "info");
+    speakNavInstruction(`Safety check-in timer armed for ${mins} minutes. Remember to confirm safety before time expires.`);
+
+    if (state.panicTimerIntervalId) clearInterval(state.panicTimerIntervalId);
+
+    state.panicTimerIntervalId = setInterval(() => {
+      if (!state.panicTimerActive) return;
+      state.panicTimerSecondsRemaining--;
+
+      updateDisplays();
+
+      // Warning beep & vibration at 30 seconds
+      if (state.panicTimerSecondsRemaining === 30 && !state.panicTimerWarnBeeped) {
+        state.panicTimerWarnBeeped = true;
+        playWarningBeep();
+        if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]);
+        speakNavInstruction("Warning: Panic safety timer expires in 30 seconds. Tap I am safe to cancel auto SOS.");
+        showToast("⚠️ 30 seconds remaining! Tap I AM SAFE to reset.", "warning", 8000);
+      }
+
+      // Auto-trigger SOS when timer reaches 00:00!
+      if (state.panicTimerSecondsRemaining <= 0) {
+        clearInterval(state.panicTimerIntervalId);
+        state.panicTimerIntervalId = null;
+        state.panicTimerActive = false;
+        if (banner) banner.classList.add("hidden");
+        if (panicActiveCard) panicActiveCard.classList.add("hidden");
+        if (panicConfig) panicConfig.classList.remove("hidden");
+
+        playWarningBeep();
+        speakNavInstruction("Emergency! Safety check-in timer expired. Auto-SOS broadcasting now.");
+        showToast("🚨 Safety timer expired! Auto-SOS triggered!", "error", 10000);
+        activateSOS();
+      }
+    }, 1000);
+  }
+
+  function resetGuardian() {
+    if (!state.panicTimerActive) return;
+    state.panicTimerSecondsRemaining = state.panicTimerIntervalMins * 60;
+    state.panicTimerWarnBeeped = false;
+    updateDisplays();
+    showToast("🛡️ Check-in confirmed! Safety timer reset.", "success");
+    speakNavInstruction("Check-in confirmed. Safety timer reset.");
+  }
+
+  function disarmGuardian() {
+    state.panicTimerActive = false;
+    if (state.panicTimerIntervalId) {
+      clearInterval(state.panicTimerIntervalId);
+      state.panicTimerIntervalId = null;
+    }
+    if (banner) banner.classList.add("hidden");
+    if (panicActiveCard) panicActiveCard.classList.add("hidden");
+    if (panicConfig) panicConfig.classList.remove("hidden");
+    showToast("⏹️ Panic Guardian disarmed.", "info");
+    speakNavInstruction("Safety guardian disarmed.");
+  }
+
+  if (startBtn) startBtn.addEventListener("click", () => armGuardian(selectedMins));
+  if (resetBtn) resetBtn.addEventListener("click", resetGuardian);
+  if (bannerResetBtn) bannerResetBtn.addEventListener("click", resetGuardian);
+  if (stopBtn) stopBtn.addEventListener("click", disarmGuardian);
+  if (triggerNowBtn) {
+    triggerNowBtn.addEventListener("click", () => {
+      disarmGuardian();
+      activateSOS();
+    });
+  }
+
+  if (bannerOpenBtn) {
+    bannerOpenBtn.addEventListener("click", () => {
+      const sosModal = document.getElementById("sos-modal");
+      if (sosModal) {
+        sosModal.showModal();
+        const panicTabBtn = sosModal.querySelector('[data-tab="panic-timer"]');
+        if (panicTabBtn) panicTabBtn.click();
+      }
+    });
+  }
 }
 
 function activateSOS() {

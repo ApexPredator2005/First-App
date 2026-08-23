@@ -319,8 +319,11 @@
       <button type="button" class="sos-tab-btn active px-3.5 py-1.5 my-1 rounded-full text-xs font-bold text-red-600 bg-red-50 border border-red-200 shadow-sm transition-all" data-tab="sos-broadcast">
         🚨 Live SOS & Contacts
       </button>
+      <button type="button" class="sos-tab-btn px-3.5 py-1.5 my-1 rounded-full text-xs font-semibold text-slate-600 bg-white/50 border border-slate-200 hover:bg-white transition-all flex items-center gap-1" data-tab="panic-timer">
+        ⏱️ Panic Safety Timer <span class="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold">DEAD-MAN SWITCH</span>
+      </button>
       <button type="button" class="sos-tab-btn px-3.5 py-1.5 my-1 rounded-full text-xs font-semibold text-slate-600 bg-white/50 border border-slate-200 hover:bg-white transition-all flex items-center gap-1" data-tab="first-aid-guide">
-        🩹 Offline AI First-Aid Guide <span class="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold">OFFLINE</span>
+        🩹 Offline AI First-Aid <span class="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold">OFFLINE</span>
       </button>
     </div>
 
@@ -375,7 +378,72 @@
         </div>
       </div>
 
-      <!-- TAB 2: Offline AI First-Aid Guide -->
+      <!-- TAB 2: Panic Safety Timer / Dead Man's Switch -->
+      <div id="tab-panic-timer" class="sos-tab-pane space-y-4 hidden">
+        <div class="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 space-y-1">
+          <div class="flex items-center gap-1.5 font-bold text-amber-800">
+            <span class="material-symbols-outlined text-base text-amber-600">timer</span>
+            <span>Solo Commute & Dead Man's Guardian</span>
+          </div>
+          <p class="text-[11.5px] leading-relaxed text-amber-800/90">
+            Set an automated safety check-in timer (<strong>20, 40, or 60 min</strong>). If you do not reset the timer before countdown finishes, ResQNow automatically broadcasts your live GPS & Medical ID to your emergency contacts.
+          </p>
+        </div>
+
+        <!-- Inactive State: Timer Selection -->
+        <div id="panic-timer-config" class="space-y-3">
+          <h4 class="font-bold text-slate-800 text-xs">⏱️ Select Check-In Interval</h4>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" class="panic-interval-btn active p-3 rounded-2xl border border-red-300 bg-red-50 text-red-700 font-headline font-bold text-xs flex flex-col items-center gap-1 shadow-sm transition-all cursor-pointer" data-mins="20">
+              <span class="text-sm">🚶‍♀️ 20 min</span>
+              <span class="text-[10px] font-normal text-slate-500">Walk / Cab</span>
+            </button>
+            <button type="button" class="panic-interval-btn p-3 rounded-2xl border border-slate-200 bg-white/70 text-slate-700 font-headline font-bold text-xs flex flex-col items-center gap-1 shadow-sm hover:bg-white transition-all cursor-pointer" data-mins="40">
+              <span class="text-sm">🚊 40 min</span>
+              <span class="text-[10px] font-normal text-slate-500">Transit / Ride</span>
+            </button>
+            <button type="button" class="panic-interval-btn p-3 rounded-2xl border border-slate-200 bg-white/70 text-slate-700 font-headline font-bold text-xs flex flex-col items-center gap-1 shadow-sm hover:bg-white transition-all cursor-pointer" data-mins="60">
+              <span class="text-sm">🚗 60 min</span>
+              <span class="text-[10px] font-normal text-slate-500">Highway</span>
+            </button>
+          </div>
+
+          <button id="start-panic-timer-btn" type="button" class="w-full py-3 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold text-xs shadow-lg hover:opacity-95 transition flex items-center justify-center gap-2 mt-2 cursor-pointer">
+            <span class="material-symbols-outlined text-base">lock_clock</span>
+            <span>ARM PANIC SAFETY GUARDIAN</span>
+          </button>
+        </div>
+
+        <!-- Active State: Live Countdown & Check-in Controls -->
+        <div id="panic-timer-active-card" class="space-y-3 hidden">
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-red-50 to-rose-100/60 border border-red-200 text-center space-y-2">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 text-red-800 font-bold text-[11px]">
+              <span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+              <span>GUARDIAN ARMED</span>
+            </div>
+            <div>
+              <span id="panic-countdown-display" class="font-headline text-3xl font-black text-red-600 tracking-tight">20:00</span>
+              <p class="text-[11px] text-slate-500 mt-0.5">Time remaining until Auto-SOS triggers</p>
+            </div>
+          </div>
+
+          <button id="reset-panic-timer-btn" type="button" class="w-full py-3.5 rounded-2xl bg-emerald-600 text-white font-bold text-xs shadow-md hover:bg-emerald-700 active:scale-[0.98] transition flex items-center justify-center gap-2 cursor-pointer">
+            <span class="material-symbols-outlined text-base">check_circle</span>
+            <span>🛡️ I AM SAFE (RESET CHECK-IN TIMER)</span>
+          </button>
+
+          <div class="flex gap-2">
+            <button id="stop-panic-timer-btn" type="button" class="flex-1 py-2.5 rounded-xl glass-panel text-slate-700 font-semibold text-xs border border-slate-200 hover:bg-white/80 transition cursor-pointer">
+              ⏹️ Stop & Disarm
+            </button>
+            <button id="panic-trigger-now-btn" type="button" class="flex-1 py-2.5 rounded-xl bg-red-100 text-red-700 font-bold text-xs border border-red-200 hover:bg-red-200 transition cursor-pointer">
+              🚨 Trigger SOS Now
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: Offline AI First-Aid Guide -->
       <div id="tab-first-aid-guide" class="sos-tab-pane space-y-3.5 hidden">
         <div class="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-900 flex items-center gap-2">
           <span class="material-symbols-outlined text-emerald-600 text-base shrink-0">verified_user</span>
@@ -783,6 +851,21 @@
         <span class="material-symbols-outlined text-sm">close</span> Exit Nav
       </button>
     </div>
+  </div>
+
+  <!-- 7. FLOATING PANIC SAFETY TIMER GUARDIAN BANNER -->
+  <div id="panic-timer-banner" class="fixed top-14 left-1/2 -translate-x-1/2 z-40 glass-panel rounded-full p-2 px-3.5 border border-red-300 shadow-2xl hidden flex items-center gap-2.5 bg-red-50/95 backdrop-blur-xl animate-fade-in-down max-w-sm w-[92vw]">
+    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+      <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping shrink-0"></span>
+      <span class="font-headline text-xs font-bold text-red-800 truncate">Guardian:</span>
+      <span id="panic-banner-countdown" class="font-headline text-xs font-black text-red-600">20:00</span>
+    </div>
+    <button id="banner-reset-panic-btn" type="button" class="px-3 py-1 rounded-full bg-emerald-600 text-white font-bold text-[11px] shadow hover:bg-emerald-700 active:scale-95 transition shrink-0 cursor-pointer flex items-center gap-1">
+      <span>🛡️ Safe</span>
+    </button>
+    <button id="banner-open-panic-btn" type="button" class="p-1 rounded-full text-slate-500 hover:text-slate-800 transition shrink-0 cursor-pointer" title="Open Panic Timer Controls">
+      <span class="material-symbols-outlined text-base">settings</span>
+    </button>
   </div>
 
   <!-- Hidden mechanics elements -->
