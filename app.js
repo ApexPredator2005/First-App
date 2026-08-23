@@ -1457,9 +1457,34 @@ async function calculateAndRenderRoute(place) {
   const destLng = typeof place.location.lng === 'function' ? place.location.lng() : Number(place.location.lng);
 
   DOM.routeHud.classList.remove("hidden");
+
+  // Populate facility details and iconography in Route Command HUD
+  const hudTitle = document.getElementById("route-hud-title");
+  const hudAddress = document.getElementById("route-hud-address");
+  const hudIcon = document.getElementById("route-hud-icon");
+  const callBtn = document.getElementById("route-call-btn");
+
+  const meta = CATEGORY_META[state.currentCategory] || { icon: "📍" };
+  const placeName = place.displayName || place.name || "Emergency Facility";
+  const placeAddr = place.formattedAddress || place.vicinity || "Address available near location";
+
+  if (hudIcon) hudIcon.textContent = meta.icon || "📍";
+  if (hudTitle) hudTitle.textContent = placeName;
+  if (hudAddress) hudAddress.textContent = placeAddr;
+
+  const phoneNum = place.internationalPhoneNumber || place.nationalPhoneNumber || null;
+  if (callBtn) {
+    if (phoneNum) {
+      callBtn.href = `tel:${phoneNum}`;
+      callBtn.classList.remove("hidden");
+    } else {
+      callBtn.classList.add("hidden");
+    }
+  }
+
   DOM.routeDuration.textContent = "Calculating...";
   DOM.routeDistance.textContent = "-- km";
-  DOM.routeSummary.textContent = `Computing shortest route to ${place.displayName || "facility"}...`;
+  DOM.routeSummary.textContent = "Fastest Road";
 
   state.navDestination = place;
   const navUrl = `https://www.google.com/maps/dir/?api=1&origin=${srcLat},${srcLng}&destination=${destLat},${destLng}&travelmode=driving`;
