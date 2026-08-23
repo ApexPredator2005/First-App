@@ -1055,6 +1055,8 @@ function applyCategoryFilters(places, category) {
 
     return true;
   });
+}
+
 // ============================================================================
 // Real-Time Facility Operational Status ("Open Now" Evaluator)
 // ============================================================================
