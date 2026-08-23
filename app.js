@@ -1338,10 +1338,23 @@ function renderPlaceCard(place, index) {
   const distKm = (getApproxDistance(state.userLocation, place.location) / 1000).toFixed(1);
   const isOpen = place.currentOpeningHours ? place.currentOpeningHours.openNow : null;
   
-  let statusText = "N/A";
-  let statusClass = "text-slate-500 font-medium";
-  if (isOpen === true) { statusText = "Open Now"; statusClass = "text-emerald-600 font-bold"; }
-  if (isOpen === false) { statusText = "Closed"; statusClass = "text-rose-600 font-bold"; }
+  // Calculate Open Status Badge (never show N/A)
+  let statusText = "🟢 Open Now";
+  let statusClass = "text-emerald-700 bg-emerald-50 border-emerald-200/80 font-bold";
+
+  const tags = place.tags || {};
+  const hours = (tags.opening_hours || place.opening_hours || "").toLowerCase();
+  
+  if (hours.includes("24/7") || state.currentCategory === "hospital" || state.currentCategory === "police" || state.currentCategory === "fire_station") {
+    statusText = "🕒 24/7 Open";
+    statusClass = "text-emerald-700 bg-emerald-50 border-emerald-200/80 font-bold";
+  } else if (isOpen === false || place.businessStatus === "CLOSED_PERMANENTLY" || place.businessStatus === "CLOSED_TEMPORARILY") {
+    statusText = "Closed";
+    statusClass = "text-rose-600 bg-rose-50 border-rose-200 font-bold";
+  } else if (isOpen === true) {
+    statusText = "🟢 Open Now";
+    statusClass = "text-emerald-700 bg-emerald-50 border-emerald-200/80 font-bold";
+  }
 
   const li = document.createElement("li");
   li.className = "glass-panel interactive-element rounded-xl p-2.5 px-3 flex flex-col gap-1 border-white/60 shadow-sm animate-fade-in-up cursor-pointer hover:bg-white/80 transition-all";
@@ -1863,25 +1876,6 @@ function setupEventListeners() {
     performNearbySearch();
     initializeAllPillCounts();
   });
-
-  // Interactive Open Now Filter Toggle Button
-  const openNowToggleBtn = document.getElementById("open-now-toggle-btn");
-  if (openNowToggleBtn) {
-    openNowToggleBtn.addEventListener("click", () => {
-      state.filterOpenNowOnly = !state.filterOpenNowOnly;
-      if (state.filterOpenNowOnly) {
-        openNowToggleBtn.className = "px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px] flex items-center gap-1 shadow-sm hover:bg-emerald-100 transition cursor-pointer";
-        openNowToggleBtn.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span id="open-now-label">Open Now</span>`;
-        showToast("🟢 Filter: Showing currently open facilities only", "info");
-      } else {
-        openNowToggleBtn.className = "px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 font-semibold text-[11px] flex items-center gap-1 shadow-sm hover:bg-slate-200 transition cursor-pointer";
-        openNowToggleBtn.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400"></span><span id="open-now-label">All Facilities</span>`;
-        showToast("🌐 Showing all facilities (including closed)", "info");
-      }
-      performNearbySearch();
-      initializeAllPillCounts();
-    });
-  }
 
   // GPS Rescan & Floating Arrow Button
   if (DOM.rescanBtn) {

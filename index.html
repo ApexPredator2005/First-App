@@ -89,22 +89,15 @@
     <div class="pointer-events-auto flex flex-col gap-4 pb-20">
       <div class="mobile-drawer-handle hidden md:hidden"></div>
       
-      <!-- Search Radius & Open Now Filter Tile -->
-      <div class="glass-tile p-2.5 px-3.5 rounded-2xl flex items-center justify-between w-full interactive-element animate-fade-in-up stagger-1 gap-2">
-        <div class="flex items-center gap-2">
-          <span class="font-body text-[12.5px] font-semibold text-slate-700">Radius</span>
-          <select id="radius-select" class="bg-white/70 border border-white/90 outline-none text-primary font-bold text-xs cursor-pointer px-2 py-1 pr-6 rounded-xl shadow-sm hover:bg-white transition-all">
-            <option value="2000" selected>2 km</option>
-            <option value="5000">5 km</option>
-            <option value="10000">10 km</option>
-            <option value="15000">15 km</option>
-          </select>
-        </div>
-
-        <button id="open-now-toggle-btn" type="button" class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px] flex items-center gap-1 shadow-sm hover:bg-emerald-100 transition cursor-pointer" title="Showing only verified open facilities">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span id="open-now-label">Open Now</span>
-        </button>
+      <!-- Search Radius Selector Tile -->
+      <div class="glass-tile p-3 px-4 rounded-2xl flex items-center justify-between w-full interactive-element animate-fade-in-up stagger-1">
+        <span class="font-body text-[13px] font-semibold text-slate-700">Search Radius</span>
+        <select id="radius-select" class="bg-white/60 border border-white/80 outline-none text-primary font-bold text-xs cursor-pointer px-3 py-1 pr-7 rounded-xl shadow-sm hover:bg-white/80 transition-all">
+          <option value="2000" selected>2 km</option>
+          <option value="5000">5 km</option>
+          <option value="10000">10 km</option>
+          <option value="15000">15 km</option>
+        </select>
       </div>
 
       <!-- Emergency Squadrons Grid -->
