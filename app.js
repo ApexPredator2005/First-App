@@ -1122,16 +1122,23 @@ function processAndRenderResults(places, category, searchId, fitBounds = true) {
   const markers = [];
   state.placesList.forEach((place, index) => {
     renderPlaceCard(place, index);
-    markers.push(renderPlaceMarker(place, index));
+    if (state.map && state.libraries?.marker?.AdvancedMarkerElement) {
+      markers.push(renderPlaceMarker(place, index));
+    }
   });
 
-  // Apply MarkerClusterer
-  if (window.markerClusterer && window.markerClusterer.MarkerClusterer) {
+  // Render Leaflet OSM markers in offline mode
+  if (state.leafletMap && window.L) {
+    renderLeafletPlaceMarkers();
+  }
+
+  // Apply MarkerClusterer for Google Maps
+  if (state.map && window.markerClusterer && window.markerClusterer.MarkerClusterer) {
     if (!state.markerClusterer) {
       state.markerClusterer = new window.markerClusterer.MarkerClusterer({ map: state.map });
     }
     state.markerClusterer.addMarkers(markers);
-  } else {
+  } else if (state.map) {
     markers.forEach(m => { m.map = state.map; });
   }
 
@@ -1331,6 +1338,14 @@ function clearPlaceMarkers() {
   }
   if (state.directionsRenderer) {
     state.directionsRenderer.setMap(null);
+  }
+  if (state.leafletMarkers) {
+    state.leafletMarkers.forEach(m => m.remove());
+    state.leafletMarkers = [];
+  }
+  if (state.leafletPolyline && state.leafletMap) {
+    state.leafletMap.removeLayer(state.leafletPolyline);
+    state.leafletPolyline = null;
   }
 }
 
@@ -2814,6 +2829,9 @@ function setupNavigation() {
 function startInAppNavigation(response, place) {
   const overlay = document.getElementById("nav-overlay");
   if (overlay) overlay.classList.remove("hidden");
+  DOM.routeHud?.classList.add("hidden");
+  document.getElementById("sidebar-island")?.classList.add("hidden");
+  document.getElementById("bottom-nav-bar")?.classList.add("hidden");
   state.navActive = true;
 
   // Extract steps based on whether it's OSRM or Google Maps
@@ -2920,6 +2938,8 @@ function advanceNavStep(userPos) {
 function stopInAppNavigation() {
   const overlay = document.getElementById("nav-overlay");
   if (overlay) overlay.classList.add("hidden");
+  document.getElementById("sidebar-island")?.classList.remove("hidden");
+  document.getElementById("bottom-nav-bar")?.classList.remove("hidden");
   state.navActive = false;
   state.navSteps = [];
   state.navCurrentStepIndex = 0;
