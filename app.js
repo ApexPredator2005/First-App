@@ -13,7 +13,7 @@ const routeCache = new Map();
 const state = {
   userLocation: null,      // { lat, lng }
   currentCategory: "hospital", // 'hospital' | 'police' | 'fire_station' | 'pharmacy'
-  searchRadius: 5000,      // in meters
+  searchRadius: 2000,      // in meters
   map: null,
   loader: null,
   libraries: {},           // Holds loaded maps, places, routes, markers libs
