@@ -1142,7 +1142,7 @@ function processAndRenderResults(places, category, searchId, fitBounds = true) {
 }
 
 // ============================================================================
-async function performNearbySearch() {
+async function performNearbySearch(fitBounds = true) {
   if (!state.userLocation) return;
 
   const searchId = ++activeSearchId;
@@ -1153,7 +1153,7 @@ async function performNearbySearch() {
   const cachedResults = googlePlacesCache.get(category, state.userLocation.lat, state.userLocation.lng, state.searchRadius);
   if (cachedResults) {
     DOM.spinner.style.display = "none";
-    processAndRenderResults(cachedResults, category, searchId, true);
+    processAndRenderResults(cachedResults, category, searchId, fitBounds);
     return;
   }
 
@@ -1230,7 +1230,7 @@ async function performNearbySearch() {
   googlePlacesCache.set(category, state.userLocation.lat, state.userLocation.lng, state.searchRadius, allMergedPlaces);
 
   // Initial render of merged results
-  processAndRenderResults(allMergedPlaces, category, searchId, true);
+  processAndRenderResults(allMergedPlaces, category, searchId, fitBounds);
 }
 
 function renderPlaceCard(place, index) {
@@ -1363,11 +1363,21 @@ function updatePillCount(category, count) {
 
 function fitMapToResults() {
   if (state.placesList.length === 0 || !state.map) return;
-  const { LatLngBounds } = state.libraries.core;
+  const LatLngBounds = state.libraries.core?.LatLngBounds || window.google?.maps?.LatLngBounds;
+  if (!LatLngBounds) return;
+
   const bounds = new LatLngBounds();
-  bounds.extend(state.userLocation);
-  state.placesList.forEach(p => bounds.extend(p.location));
-  state.map.fitBounds(bounds, { top: 70, right: 70, bottom: 70, left: 450 });
+  if (state.userLocation) bounds.extend(state.userLocation);
+  state.placesList.forEach(p => {
+    if (p && p.location) bounds.extend(p.location);
+  });
+
+  const isMobile = window.innerWidth < 768;
+  const padding = isMobile
+    ? { top: 80, right: 24, bottom: 260, left: 24 }
+    : { top: 70, right: 70, bottom: 70, left: 450 };
+
+  state.map.fitBounds(bounds, padding);
 }
 
 // ============================================================================
@@ -1764,22 +1774,23 @@ function setupEventListeners() {
         // 1. Google Maps JS API (interactive)
         if (state.map) {
           state.map.panTo({ lat, lng });
-          state.map.setZoom(15);
+          state.map.setZoom(16);
 
         // 2. Leaflet OSM (interactive)
         } else if (state.leafletMap) {
-          state.leafletMap.setView([lat, lng], 15);
+          state.leafletMap.setView([lat, lng], 16);
           if (typeof updateLeafletUserMarker === "function") updateLeafletUserMarker();
 
-        // 3. Google Maps Embed iframe — rebuild src URL with new coords + zoom
+        // 3. Google Maps Embed iframe — rebuild src URL with new coords + close-up zoom 16
         } else {
           const iframe = document.getElementById("gmaps-embed-iframe");
           if (iframe) {
-            iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+            iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
           }
         }
 
-        performNearbySearch();
+        // Fetch nearby places without letting fitBounds zoom the map back out
+        performNearbySearch(false);
       } else {
         showToast("⚠️ Could not get your location. Please enable GPS.", "error");
       }
