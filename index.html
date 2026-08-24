@@ -616,6 +616,37 @@
           <label for="profile-allergies" class="block text-xs font-semibold text-slate-600 mb-1">⚠️ Known Allergies</label>
           <textarea id="profile-allergies" rows="2" placeholder="e.g. Penicillin, Peanuts, Latex..." class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200"></textarea>
         </div>
+
+        <!-- Health Insurance & Cashless Policy Profile -->
+        <div class="p-3.5 rounded-2xl bg-gradient-to-br from-blue-50/80 to-indigo-50/60 border border-blue-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-blue-600 text-base">verified_user</span>
+              <span>Health Insurance & Cashless Policy</span>
+            </h4>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">Cashless Admission</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="profile-insurance-provider" class="block text-[11px] font-semibold text-slate-600 mb-1">Insurance Provider / TPA</label>
+              <input type="text" id="profile-insurance-provider" placeholder="e.g. Star Health / HDFC ERGO / PM-JAY" class="w-full px-3 py-2 rounded-xl bg-white/90 border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+              <label for="profile-insurance-policy-no" class="block text-[11px] font-semibold text-slate-600 mb-1">Policy / Member ID No.</label>
+              <input type="text" id="profile-insurance-policy-no" placeholder="e.g. POL-98432109" class="w-full px-3 py-2 rounded-xl bg-white/90 border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+              <label for="profile-insurance-tpa-id" class="block text-[11px] font-semibold text-slate-600 mb-1">TPA Card / Group ID</label>
+              <input type="text" id="profile-insurance-tpa-id" placeholder="e.g. TPA-88421 / MediAssist" class="w-full px-3 py-2 rounded-xl bg-white/90 border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+              <label for="profile-insurance-helpline" class="block text-[11px] font-semibold text-slate-600 mb-1">24/7 TPA Claim Helpline</label>
+              <input type="tel" id="profile-insurance-helpline" placeholder="e.g. 1800-425-2255" class="w-full px-3 py-2 rounded-xl bg-white/90 border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+          </div>
+        </div>
+
         <div>
           <label for="profile-conditions" class="block text-xs font-semibold text-slate-600 mb-1">🩻 Chronic Conditions</label>
           <textarea id="profile-conditions" rows="2" placeholder="e.g. Asthma, Diabetes Type 2..." class="w-full px-3 py-2 rounded-xl bg-white/70 border border-slate-200"></textarea>

@@ -2105,7 +2105,9 @@ function setupEventListeners() {
     "profile-name", "profile-age", "profile-blood",
     "profile-height", "profile-weight", "profile-emergency-contact",
     "profile-sos-message",
-    "profile-allergies", "profile-conditions", "profile-medications", "profile-notes"
+    "profile-allergies", "profile-conditions", "profile-medications", "profile-notes",
+    "profile-insurance-provider", "profile-insurance-policy-no",
+    "profile-insurance-tpa-id", "profile-insurance-helpline"
   ];
 
   // Load saved profile on page load
@@ -2141,6 +2143,16 @@ function setupEventListeners() {
     if (g("profile-height")) text += `📏 *Height:* ${g("profile-height")} cm\n`;
     if (g("profile-weight")) text += `⚖️ *Weight:* ${g("profile-weight")} kg\n`;
     if (g("profile-emergency-contact")) text += `📞 *Emergency Contact:* ${g("profile-emergency-contact")}\n`;
+    
+    if (g("profile-insurance-provider") || g("profile-insurance-policy-no")) {
+      text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+      text += "🛡️ *HEALTH INSURANCE & CASHLESS ADMISSION:*\n";
+      if (g("profile-insurance-provider")) text += `🏥 *Provider/TPA:* ${g("profile-insurance-provider")}\n`;
+      if (g("profile-insurance-policy-no")) text += `💳 *Policy/Member No:* ${g("profile-insurance-policy-no")}\n`;
+      if (g("profile-insurance-tpa-id")) text += `🆔 *TPA Card ID:* ${g("profile-insurance-tpa-id")}\n`;
+      if (g("profile-insurance-helpline")) text += `📞 *Claim Helpline:* ${g("profile-insurance-helpline")}\n`;
+    }
+
     text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
     if (g("profile-allergies")) text += `⚠️ *Allergies:* ${g("profile-allergies")}\n`;
     if (g("profile-conditions")) text += `🩻 *Conditions:* ${g("profile-conditions")}\n`;
@@ -3002,6 +3014,9 @@ function sendSOSLocation() {
   if (profile["profile-blood-group"]) medicalDetails.push(`🩸 Blood Group: ${profile["profile-blood-group"]}`);
   if (profile["profile-allergies"]) medicalDetails.push(`⚠️ Allergies: ${profile["profile-allergies"]}`);
   if (profile["profile-conditions"]) medicalDetails.push(`📋 Medical Conditions: ${profile["profile-conditions"]}`);
+  if (profile["profile-insurance-provider"] || profile["profile-insurance-policy-no"]) {
+    medicalDetails.push(`🛡️ Insurance: ${profile["profile-insurance-provider"] || ""} (Policy: ${profile["profile-insurance-policy-no"] || ""})`);
+  }
   
   if (medicalDetails.length > 0) {
     msg += `\n\n🩺 *PATIENT MEDICAL ID:*\n` + medicalDetails.join("\n");
