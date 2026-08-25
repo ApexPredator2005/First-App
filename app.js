@@ -234,12 +234,17 @@ function populateLibraries() {
 
 async function initializeAppEngine() {
   try {
-    DOM.feedStatus.textContent = "Loading Emergency System...";
+    DOM.feedStatus.textContent = "Connecting Emergency Radar...";
     DOM.spinner.style.display = "inline-block";
 
-    // 1. Attempt loading Google Maps Script if API key is provided
-    if (state.apiKey) {
-      await loadGoogleMapsScript(state.apiKey);
+    // 1. Instant Fast-Boot from Last-Known Location
+    let lastKnown = null;
+    try {
+      lastKnown = JSON.parse(localStorage.getItem("RESQNOW_LAST_LOCATION") || "null");
+    } catch(e) {}
+
+    if (lastKnown && lastKnown.lat && lastKnown.lng) {
+      applyLocation(lastKnown, lastKnown.label || formatCoordsLabel(lastKnown.lat, lastKnown.lng));
     }
 
     // 2. Render Map Stage immediately (Google Maps if API key is present, otherwise Leaflet OpenStreetMap Engine)
@@ -250,39 +255,52 @@ async function initializeAppEngine() {
       try { renderMap(); } catch(e) { console.warn("Leaflet Map render notice:", e); }
     }
 
-    // 3. Acquire User GPS Geolocation
-    await detectUserLocation();
+    // 3. If we have a cached location, start searching / rendering cached places immediately in parallel!
+    if (state.userLocation) {
+      performNearbySearch(true);
+    }
 
-    // 4. Perform Initial Proximity Scan (Renders 20 emergency units per category)
-    await performNearbySearch();
+    // 4. Concurrently acquire fresh GPS Geolocation & update position seamlessly in background
+    detectUserLocation().then((freshCoords) => {
+      if (freshCoords) {
+        performNearbySearch(true);
+        initializeAllPillCounts();
+      }
+    });
 
-    // 5. Initialize all category pill counts
+    // 5. Initialize category pill counts with staggered scheduling
     initializeAllPillCounts();
 
   } catch (error) {
     console.error("Initialization Error:", error);
-    // Guarantee location detection, facility display, and pill counts render no matter what!
-    await detectUserLocation();
-    await performNearbySearch();
-    initializeAllPillCounts();
+    detectUserLocation().then(() => {
+      performNearbySearch();
+      initializeAllPillCounts();
+    });
   }
 }
 
 function initializeAllPillCounts() {
-  Object.keys(CATEGORY_META).forEach(async (cat) => {
-    const countSpan = document.getElementById(`count-${cat}`);
-    if (!countSpan) return;
-    if (cat === state.currentCategory) {
-      animateCountUp(countSpan, state.placesList.length);
-      return;
-    }
-    // For non-active categories, do a quick count via the same search pipeline
-    try {
-      const count = await getCountForCategory(cat);
-      animateCountUp(countSpan, count);
-    } catch(e) {
-      animateCountUp(countSpan, 0);
-    }
+  const categories = Object.keys(CATEGORY_META);
+  
+  // 1. Immediately set active category count from placesList without waiting for network
+  const activeCountSpan = document.getElementById(`count-${state.currentCategory}`);
+  if (activeCountSpan && state.placesList) {
+    animateCountUp(activeCountSpan, state.placesList.length);
+  }
+
+  // 2. Stagger background counts so they don't block the main network thread
+  categories.filter(c => c !== state.currentCategory).forEach((cat, index) => {
+    setTimeout(async () => {
+      const countSpan = document.getElementById(`count-${cat}`);
+      if (!countSpan) return;
+      try {
+        const count = await getCountForCategory(cat);
+        animateCountUp(countSpan, count);
+      } catch(e) {
+        animateCountUp(countSpan, 0);
+      }
+    }, 350 * (index + 1));
   });
 }
 
@@ -391,52 +409,129 @@ async function reverseGeocode(lat, lng) {
   }
 }
 
+// Ultra-fast sub-second IP-based Geolocation fallback
+async function fastIpGeolocation() {
+  const ipProviders = [
+    async () => {
+      const c = new AbortController();
+      const t = setTimeout(() => c.abort(), 1800);
+      const res = await fetch("https://ipapi.co/json/", { signal: c.signal });
+      clearTimeout(t);
+      if (!res.ok) throw new Error("ipapi failed");
+      const d = await res.json();
+      if (d.latitude && d.longitude) {
+        return {
+          coords: { lat: d.latitude, lng: d.longitude },
+          label: `${d.city || ""}, ${d.region || ""}, ${d.postal || ""}`.replace(/^, |, $/g, "")
+        };
+      }
+      throw new Error("No coords");
+    },
+    async () => {
+      const c = new AbortController();
+      const t = setTimeout(() => c.abort(), 1800);
+      const res = await fetch("https://freeipapi.com/api/json", { signal: c.signal });
+      clearTimeout(t);
+      if (!res.ok) throw new Error("freeipapi failed");
+      const d = await res.json();
+      if (d.latitude && d.longitude) {
+        return {
+          coords: { lat: d.latitude, lng: d.longitude },
+          label: `${d.cityName || ""}, ${d.regionName || ""}, ${d.zipCode || ""}`.replace(/^, |, $/g, "")
+        };
+      }
+      throw new Error("No coords");
+    }
+  ];
+
+  try {
+    return await Promise.any(ipProviders.map(fn => fn()));
+  } catch (e) {
+    return null;
+  }
+}
+
 async function detectUserLocation() {
-  DOM.coordsDisplay.textContent = "Acquiring high-precision GPS location...";
-  
-  return new Promise((resolve) => {
-    const finishLocation = (coords, fallbackLabel) => {
+  return new Promise(async (resolve) => {
+    let resolved = false;
+
+    const finishLocation = (coords, fallbackLabel, isFinal = false) => {
       applyLocation(coords, fallbackLabel);
-      resolve(coords);
+      try {
+        localStorage.setItem("RESQNOW_LAST_LOCATION", JSON.stringify({ lat: coords.lat, lng: coords.lng, label: fallbackLabel }));
+      } catch(e) {}
+
+      if (!resolved) {
+        resolved = true;
+        resolve(coords);
+      }
+
+      // Background non-blocking reverse geocode
       reverseGeocode(coords.lat, coords.lng).then(address => {
         if (address) {
           DOM.coordsDisplay.textContent = address;
+          try {
+            localStorage.setItem("RESQNOW_LAST_LOCATION", JSON.stringify({ lat: coords.lat, lng: coords.lng, label: address }));
+          } catch(e) {}
         }
       });
     };
 
-    const safetyTimeout = setTimeout(() => {
-      console.warn("GPS satellite lock timeout, using detected area coordinates...");
-      finishLocation(state.userLocation || { lat: 25.623, lng: 85.091 }, "Digha, Patna, 800024");
-    }, 8000);
+    // 1. Instant check: Last known saved location (0ms instantaneous boot!)
+    try {
+      const saved = JSON.parse(localStorage.getItem("RESQNOW_LAST_LOCATION") || "null");
+      if (saved && saved.lat && saved.lng) {
+        finishLocation(saved, saved.label || formatCoordsLabel(saved.lat, saved.lng));
+      }
+    } catch(e) {}
+
+    // Safety fallback timer: if GPS hardware takes > 2.2s, grab fast IP geolocation
+    const safetyTimeout = setTimeout(async () => {
+      if (!resolved) {
+        const ipLoc = await fastIpGeolocation();
+        if (ipLoc) {
+          finishLocation(ipLoc.coords, ipLoc.label);
+        } else {
+          finishLocation(state.userLocation || { lat: 25.623, lng: 85.091 }, "Digha, Patna, 800024");
+        }
+      }
+    }, 2200);
 
     if (!navigator.geolocation) {
       clearTimeout(safetyTimeout);
-      finishLocation({ lat: 25.623, lng: 85.091 }, "Digha, Patna, 800024");
+      if (!resolved) finishLocation({ lat: 25.623, lng: 85.091 }, "Digha, Patna, 800024");
       return;
     }
 
+    // High speed GPS check (allows up to 2 min cached location from OS for <100ms response!)
     navigator.geolocation.getCurrentPosition(
       (position) => {
         clearTimeout(safetyTimeout);
         const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
-        finishLocation(coords, formatCoordsLabel(coords.lat, coords.lng));
+        finishLocation(coords, formatCoordsLabel(coords.lat, coords.lng), true);
       },
       (error) => {
         navigator.geolocation.getCurrentPosition(
           (wifiPosition) => {
             clearTimeout(safetyTimeout);
             const wifiCoords = { lat: wifiPosition.coords.latitude, lng: wifiPosition.coords.longitude };
-            finishLocation(wifiCoords, formatCoordsLabel(wifiCoords.lat, wifiCoords.lng));
+            finishLocation(wifiCoords, formatCoordsLabel(wifiCoords.lat, wifiCoords.lng), true);
           },
-          (finalError) => {
+          async (finalError) => {
             clearTimeout(safetyTimeout);
-            finishLocation({ lat: 25.623, lng: 85.091 }, "Digha, Patna, 800024");
+            if (!resolved) {
+              const ipLoc = await fastIpGeolocation();
+              if (ipLoc) {
+                finishLocation(ipLoc.coords, ipLoc.label);
+              } else {
+                finishLocation({ lat: 25.623, lng: 85.091 }, "Digha, Patna, 800024");
+              }
+            }
           },
-          { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+          { enableHighAccuracy: false, timeout: 3000, maximumAge: 300000 }
         );
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 3000, maximumAge: 120000 }
     );
   });
 }
@@ -740,11 +835,35 @@ function mergeAndDeduplicatePlaces(existingList = [], newList = []) {
   return merged;
 }
 
-// Session Cache for Google Places / OpenStreetMap searches with Cumulative Radius Support
+// Session Cache for Google Places / OpenStreetMap searches with Cumulative Radius Support & LocalStorage Persistence
 const googlePlacesCache = {
   // Key format: `${category}_${lat.toFixed(3)}_${lng.toFixed(3)}`
   // Value format: { timestamp: Number, radius: Number, results: Array }
   data: new Map(),
+
+  init() {
+    try {
+      const stored = localStorage.getItem("RESQNOW_PLACES_CACHE");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        for (const [k, v] of Object.entries(parsed)) {
+          if (Date.now() - v.timestamp < 900000) { // 15 min TTL
+            this.data.set(k, v);
+          }
+        }
+      }
+    } catch(e) {}
+  },
+
+  persist() {
+    try {
+      const obj = {};
+      this.data.forEach((v, k) => {
+        if (Date.now() - v.timestamp < 900000) obj[k] = v;
+      });
+      localStorage.setItem("RESQNOW_PLACES_CACHE", JSON.stringify(obj));
+    } catch(e) {}
+  },
 
   set(category, lat, lng, radius, results) {
     const key = `${category}_${lat.toFixed(3)}_${lng.toFixed(3)}`;
@@ -763,6 +882,7 @@ const googlePlacesCache = {
       radius: maxRadius,
       results: mergedResults
     });
+    this.persist();
   },
 
   get(category, lat, lng, targetRadius) {
@@ -770,8 +890,8 @@ const googlePlacesCache = {
     const cached = this.data.get(key);
     if (!cached) return null;
 
-    // Check expiration (5 minutes = 300,000 milliseconds)
-    const isExpired = Date.now() - cached.timestamp > 300000;
+    // Check expiration (15 minutes = 900,000 milliseconds)
+    const isExpired = Date.now() - cached.timestamp > 900000;
     if (isExpired) {
       this.data.delete(key);
       return null;
@@ -797,6 +917,7 @@ const googlePlacesCache = {
     return cached && Array.isArray(cached.results) ? cached.results : [];
   }
 };
+googlePlacesCache.init();
 
 async function searchWithOverpassAPI(category, userLoc, radius) {
   try {
@@ -813,7 +934,7 @@ async function searchWithOverpassAPI(category, userLoc, radius) {
     }
 
     const tagQueries = osmTags.map(t => `${t}(around:${r},${lat},${lng});`).join("");
-    const query = `[out:json][timeout:10];(${tagQueries});out center body;`;
+    const query = `[out:json][timeout:8];(${tagQueries});out center body;`;
 
     const mirrors = [
       "https://overpass-api.de/api/interpreter",
@@ -821,21 +942,29 @@ async function searchWithOverpassAPI(category, userLoc, radius) {
       "https://overpass.private.coffee/api/interpreter"
     ];
 
-    let data = null;
-    for (const mirror of mirrors) {
+    // Race mirrors in parallel for sub-second responses
+    const fetchMirror = async (mirror) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4500);
       try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 6000);
         const url = `${mirror}?data=${encodeURIComponent(query)}`;
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(timer);
-        if (res.ok) {
-          data = await res.json();
-          if (data && data.elements && data.elements.length > 0) break;
-        }
-      } catch (mirrorErr) {
-        console.warn(`Overpass mirror ${mirror} failed:`, mirrorErr);
+        if (!res.ok) throw new Error(`Mirror ${mirror} HTTP ${res.status}`);
+        const json = await res.json();
+        if (json && json.elements && json.elements.length > 0) return json;
+        throw new Error("Empty elements");
+      } catch (e) {
+        clearTimeout(timer);
+        throw e;
       }
+    };
+
+    let data = null;
+    try {
+      data = await Promise.any(mirrors.map(fetchMirror));
+    } catch (raceErr) {
+      console.warn("Fast parallel Overpass race failed:", raceErr);
     }
 
     if (!data || !data.elements || data.elements.length === 0) return [];
