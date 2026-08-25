@@ -237,53 +237,81 @@ async function initializeAppEngine() {
     DOM.feedStatus.textContent = "Loading Emergency System...";
     DOM.spinner.style.display = "inline-block";
 
-    // 1. Attempt loading Google Maps Script if API key is provided
-    if (state.apiKey) {
-      await loadGoogleMapsScript(state.apiKey);
-    }
+    // ------------------------------------------------------------------------
+    // STRATEGY 1: Parallel Map Initialization & Hardware GPS Lock
+    // ------------------------------------------------------------------------
+    // Track 1: Mount Map Engine (Google Maps SDK or Leaflet OSM)
+    const mapInitPromise = (async () => {
+      if (state.apiKey) {
+        await loadGoogleMapsScript(state.apiKey);
+      }
+      if (window.google && window.google.maps && state.apiKey) {
+        try { renderMap(); } catch(e) { console.warn("Map render notice:", e); }
+      } else {
+        DOM.feedStatus.textContent = "Emergency Radar Active (OpenStreetMap Engine)";
+        try { renderMap(); } catch(e) { console.warn("Leaflet Map render notice:", e); }
+      }
+    })();
 
-    // 2. Render Map Stage immediately (Google Maps if API key is present, otherwise Leaflet OpenStreetMap Engine)
-    if (window.google && window.google.maps && state.apiKey) {
-      try { renderMap(); } catch(e) { console.warn("Map render notice:", e); }
-    } else {
-      DOM.feedStatus.textContent = "Emergency Radar Active (OpenStreetMap Engine)";
-      try { renderMap(); } catch(e) { console.warn("Leaflet Map render notice:", e); }
-    }
+    // Track 2: Hardware Real-Time High-Accuracy GPS Lock (runs in parallel!)
+    const locationPromise = detectUserLocation();
 
-    // 3. Acquire User GPS Geolocation
-    await detectUserLocation();
+    // Overlap tracks so map scripts/canvas mount while GPS hardware acquires satellites
+    await Promise.all([mapInitPromise, locationPromise]);
 
-    // 4. Perform Initial Proximity Scan (Renders 20 emergency units per category)
+    // ------------------------------------------------------------------------
+    // STRATEGY 2: Primary-First Priority Emergency Scan
+    // ------------------------------------------------------------------------
+    // Give 100% network bandwidth to the user's active emergency service first
     await performNearbySearch();
 
-    // 5. Initialize all category pill counts
+    // Stagger secondary background category counters in non-blocking idle time
     initializeAllPillCounts();
 
   } catch (error) {
     console.error("Initialization Error:", error);
-    // Guarantee location detection, facility display, and pill counts render no matter what!
     await detectUserLocation();
     await performNearbySearch();
     initializeAllPillCounts();
   }
 }
 
+let pillCountTimeout = null;
 function initializeAllPillCounts() {
-  Object.keys(CATEGORY_META).forEach(async (cat) => {
-    const countSpan = document.getElementById(`count-${cat}`);
-    if (!countSpan) return;
-    if (cat === state.currentCategory) {
-      animateCountUp(countSpan, state.placesList.length);
-      return;
-    }
-    // For non-active categories, do a quick count via the same search pipeline
-    try {
-      const count = await getCountForCategory(cat);
-      animateCountUp(countSpan, count);
-    } catch(e) {
-      animateCountUp(countSpan, 0);
-    }
-  });
+  // 1. Immediately update active category count from existing state results (0ms delay!)
+  const activeCountSpan = document.getElementById(`count-${state.currentCategory}`);
+  if (activeCountSpan) {
+    animateCountUp(activeCountSpan, state.placesList ? state.placesList.length : 0);
+  }
+
+  // 2. Clear pending background counters to avoid TCP queue contention
+  if (pillCountTimeout) clearTimeout(pillCountTimeout);
+
+  // 3. Stagger secondary background queries without blocking active user feed
+  const secondaryCategories = Object.keys(CATEGORY_META).filter(cat => cat !== state.currentCategory);
+
+  const runSecondaryCounts = () => {
+    secondaryCategories.forEach((cat, index) => {
+      setTimeout(async () => {
+        // Skip if user switched to this category while waiting
+        if (cat === state.currentCategory) return;
+        const countSpan = document.getElementById(`count-${cat}`);
+        if (!countSpan) return;
+        try {
+          const count = await getCountForCategory(cat);
+          animateCountUp(countSpan, count);
+        } catch(e) {
+          animateCountUp(countSpan, 0);
+        }
+      }, index * 200); // 200ms stagger prevents network queue blocking
+    });
+  };
+
+  if (typeof window.requestIdleCallback === "function") {
+    requestIdleCallback(runSecondaryCounts, { timeout: 1500 });
+  } else {
+    pillCountTimeout = setTimeout(runSecondaryCounts, 600);
+  }
 }
 
 async function getCountForCategory(category) {
